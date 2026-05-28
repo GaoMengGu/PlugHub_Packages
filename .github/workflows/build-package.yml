@@ -74,16 +74,20 @@ jobs:
             PlugHub_Packages/dist/*.dll
 
       - name: Package release zip
-        if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request' && github.actor != 'github-actions[bot]'
         shell: pwsh
         working-directory: PlugHub_Packages
         run: |
-          $zipName = if ("${{ github.ref_type }}" -eq "tag") {
-            "PlugHub-Packages-${{ github.ref_name }}.zip"
+          $versionTag = if ("${{ github.ref_type }}" -eq "tag") {
+            "${{ github.ref_name }}"
           } else {
-            "PlugHub-Packages-latest.zip"
+            "v0.0.${{ github.run_number }}"
           }
+          $version = if ($versionTag.StartsWith("v")) { $versionTag.Substring(1) } else { $versionTag }
+          $zipName = "PlugHub-Packages-$versionTag.zip"
 
+          "PACKAGE_VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "PACKAGE_VERSION_TAG=$versionTag" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           "PACKAGE_ZIP=$zipName" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
           $packageRoot = Join-Path "release" "PlugHub_Packages"
@@ -111,18 +115,21 @@ jobs:
           }
 
       - name: Publish GitHub release
-        if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request' && github.actor != 'github-actions[bot]'
         shell: pwsh
         working-directory: PlugHub_Packages
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           $tagName = if ("${{ github.ref_type }}" -eq "tag") { "${{ github.ref_name }}" } else { "latest" }
-          $title = if ("${{ github.ref_type }}" -eq "tag") { "PlugHub Packages $tagName" } else { "PlugHub Packages 最新版" }
+          $title = if ("${{ github.ref_type }}" -eq "tag") { "PlugHub Packages $env:PACKAGE_VERSION_TAG" } else { "PlugHub Packages $env:PACKAGE_VERSION_TAG (latest)" }
           $notesPath = "release-notes.md"
+          $releaseTarget = (git rev-parse HEAD).Trim()
 
           @"
           PlugHub 外部插件包发布包。
+
+          版本：$env:PACKAGE_VERSION_TAG
 
           安装方式：
           1. 下载并解压 $env:PACKAGE_ZIP。
@@ -133,7 +140,7 @@ jobs:
           "@ | Set-Content -LiteralPath $notesPath -Encoding UTF8
 
           if ("${{ github.ref_type }}" -ne "tag") {
-            git tag -f $tagName $env:GITHUB_SHA
+            git tag -f $tagName $releaseTarget
             git push origin "refs/tags/$tagName" --force
           }
 
@@ -141,8 +148,17 @@ jobs:
           $releaseExists = $LASTEXITCODE -eq 0
 
           if ($releaseExists) {
+            if ($tagName -eq "latest") {
+              $assetNames = gh release view $tagName --json assets --jq ".assets[].name"
+              foreach ($assetName in $assetNames) {
+                if ($assetName -like "PlugHub-Packages-v*.zip") {
+                  gh release delete-asset $tagName $assetName --yes
+                }
+              }
+            }
+
             gh release upload $tagName $env:PACKAGE_ZIP --clobber
             gh release edit $tagName --title $title --notes-file $notesPath --latest
           } else {
-            gh release create $tagName $env:PACKAGE_ZIP --title $title --notes-file $notesPath --latest --target $env:GITHUB_SHA
+            gh release create $tagName $env:PACKAGE_ZIP --title $title --notes-file $notesPath --latest --target $releaseTarget
           }
