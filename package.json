@@ -25,7 +25,7 @@
         {
           "id": "plughub.modules.duct-preferred-junction.switch",
           "name": "切换风管首选连接",
-          "displayName": "Tee/Tap 切换",
+          "displayName": "风管接头切换",
           "description": "在已选或点选风管的类型上切换 Tee/Tap 首选连接类型。",
           "category": "mep",
           "group": "机电风管",

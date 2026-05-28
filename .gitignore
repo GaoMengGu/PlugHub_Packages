@@ -12,3 +12,7 @@ __pycache__/
 
 # PlugHub consumes the package DLLs from dist. PDBs are local diagnostics only.
 dist/*.pdb
+
+# Local release packaging output.
+release/
+PlugHub-Packages-*.zip

@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - main
+    tags:
+      - "v*"
   pull_request:
   workflow_dispatch:
 
@@ -71,6 +73,29 @@ jobs:
             PlugHub_Packages/package.json
             PlugHub_Packages/dist/*.dll
 
+      - name: Package release zip
+        if: github.event_name != 'pull_request'
+        shell: pwsh
+        working-directory: PlugHub_Packages
+        run: |
+          $zipName = if ("${{ github.ref_type }}" -eq "tag") {
+            "PlugHub-Packages-${{ github.ref_name }}.zip"
+          } else {
+            "PlugHub-Packages-latest.zip"
+          }
+
+          "PACKAGE_ZIP=$zipName" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+          $packageRoot = Join-Path "release" "PlugHub_Packages"
+          if (Test-Path -LiteralPath "release") {
+            Remove-Item -LiteralPath "release" -Recurse -Force
+          }
+
+          New-Item -ItemType Directory -Force -Path (Join-Path $packageRoot "dist") | Out-Null
+          Copy-Item -LiteralPath "package.json" -Destination $packageRoot -Force
+          Get-ChildItem -LiteralPath "dist" -Filter "*.dll" -File | Copy-Item -Destination (Join-Path $packageRoot "dist") -Force
+          Compress-Archive -Path $packageRoot -DestinationPath $zipName -Force
+
       - name: Commit dist DLLs
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         shell: pwsh
@@ -83,4 +108,41 @@ jobs:
           if ((git status --porcelain) -ne "") {
             git commit -m "chore: update package binaries"
             git push
+          }
+
+      - name: Publish GitHub release
+        if: github.event_name != 'pull_request'
+        shell: pwsh
+        working-directory: PlugHub_Packages
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tagName = if ("${{ github.ref_type }}" -eq "tag") { "${{ github.ref_name }}" } else { "latest" }
+          $title = if ("${{ github.ref_type }}" -eq "tag") { "PlugHub Packages $tagName" } else { "PlugHub Packages 最新版" }
+          $notesPath = "release-notes.md"
+
+          @"
+          PlugHub 外部插件包发布包。
+
+          安装方式：
+          1. 下载并解压 $env:PACKAGE_ZIP。
+          2. 将解压得到的 PlugHub_Packages 文件夹放入 PlugHub 的 packages/dropins 目录。
+          3. 重启 Revit 或重新加载 PlugHub。
+
+          也可以在 PlugHub 的 config\sources.json 中配置 GitHub 来源 GaoMengGu/PlugHub_Packages。
+          "@ | Set-Content -LiteralPath $notesPath -Encoding UTF8
+
+          if ("${{ github.ref_type }}" -ne "tag") {
+            git tag -f $tagName $env:GITHUB_SHA
+            git push origin "refs/tags/$tagName" --force
+          }
+
+          gh release view $tagName *> $null
+          $releaseExists = $LASTEXITCODE -eq 0
+
+          if ($releaseExists) {
+            gh release upload $tagName $env:PACKAGE_ZIP --clobber
+            gh release edit $tagName --title $title --notes-file $notesPath --latest
+          } else {
+            gh release create $tagName $env:PACKAGE_ZIP --title $title --notes-file $notesPath --latest --target $env:GITHUB_SHA
           }

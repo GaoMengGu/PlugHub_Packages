@@ -22,7 +22,7 @@ namespace PlugHub.DuctPreferredJunction
                     {
                         Id = "plughub.modules.duct-preferred-junction.switch",
                         ModuleId = "plughub.modules.duct-preferred-junction",
-                        Name = "Tee/Tap 切换",
+                        Name = "风管接头切换",
                         Description = "在已选或点选风管的类型上切换 Tee/Tap 首选连接类型。",
                         Category = "mep",
                         Group = "机电风管",
