@@ -1,0 +1,14 @@
+bin/
+obj/
+.vs/
+TestResults/
+.pytest_cache/
+__pycache__/
+
+*.user
+*.suo
+*.nupkg
+*.snupkg
+
+# PlugHub consumes the package DLLs from dist. PDBs are local diagnostics only.
+dist/*.pdb

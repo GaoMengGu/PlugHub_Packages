@@ -1,0 +1,76 @@
+{
+  "schemaVersion": "1.0",
+  "packageDirectories": [],
+  "moduleSources": [],
+  "conflictPolicy": {
+    "duplicateFeatureId": "fail-feature",
+    "duplicateModuleId": "fail-module",
+    "missingModuleType": "warn"
+  },
+  "modules": [
+    {
+      "id": "plughub.modules.duct-preferred-junction",
+      "assembly": "dist/PlugHub.DuctPreferredJunction.dll",
+      "type": "PlugHub.DuctPreferredJunction.DuctPreferredJunctionModule",
+      "name": "机电风管",
+      "displayName": "机电风管",
+      "description": "风管连接偏好工具。",
+      "sourceId": "plughub-packages",
+      "enabled": true,
+      "visible": true,
+      "order": 300,
+      "tags": ["mep", "duct", "revit-api"],
+      "dependsOn": [],
+      "features": [
+        {
+          "id": "plughub.modules.duct-preferred-junction.switch",
+          "name": "切换风管首选连接",
+          "displayName": "Tee/Tap 切换",
+          "description": "在已选或点选风管的类型上切换 Tee/Tap 首选连接类型。",
+          "category": "mep",
+          "group": "机电风管",
+          "tags": ["mep", "duct", "frequent"],
+          "order": 310,
+          "defaultState": "Visible",
+          "buttonSize": "large",
+          "iconPath": "",
+          "commandKey": "plughub.modules.duct-preferred-junction.switch",
+          "commandAssembly": "dist/PlugHub.DuctPreferredJunction.dll",
+          "commandType": "PlugHub.DuctPreferredJunction.DuctPreferredJunctionSwitcherCommand"
+        }
+      ]
+    },
+    {
+      "id": "plughub.modules.family-material-parameters",
+      "assembly": "dist/PlugHub.FamilyMaterialParameters.dll",
+      "type": "PlugHub.FamilyMaterialParameters.FamilyMaterialParametersModule",
+      "name": "族批处理",
+      "displayName": "族批处理",
+      "description": "族文件材质参数批处理工具。",
+      "sourceId": "plughub-packages",
+      "enabled": true,
+      "visible": true,
+      "order": 400,
+      "tags": ["family", "material", "revit-api"],
+      "dependsOn": [],
+      "features": [
+        {
+          "id": "plughub.modules.family-material-parameters.batch-add-material",
+          "name": "批量添加材质参数",
+          "displayName": "批量材质参数",
+          "description": "批量打开族文件，添加材质参数并关联实体材质参数。",
+          "category": "family",
+          "group": "族批处理",
+          "tags": ["family", "material", "batch"],
+          "order": 410,
+          "defaultState": "Visible",
+          "buttonSize": "large",
+          "iconPath": "",
+          "commandKey": "plughub.modules.family-material-parameters.batch-add-material",
+          "commandAssembly": "dist/PlugHub.FamilyMaterialParameters.dll",
+          "commandType": "PlugHub.FamilyMaterialParameters.BatchAddMaterialParameterCommand"
+        }
+      ]
+    }
+  ]
+}

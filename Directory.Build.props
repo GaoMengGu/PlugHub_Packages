@@ -1,0 +1,16 @@
+<Project>
+  <PropertyGroup>
+    <LangVersion>8.0</LangVersion>
+    <Nullable>enable</Nullable>
+    <Deterministic>true</Deterministic>
+    <Company>GAOMENGGU</Company>
+    <Product>PlugHub Modules</Product>
+    <Authors>GAOMENGGU</Authors>
+    <Configurations>Debug;Release</Configurations>
+    <RevitVersion Condition="'$(RevitVersion)' == ''">2020</RevitVersion>
+    <RevitApiReferenceMode Condition="'$(RevitApiReferenceMode)' == ''">Installed</RevitApiReferenceMode>
+    <Revit2020InstallDir Condition="'$(Revit2020InstallDir)' == ''">D:\Program Files\Autodesk\Revit 2020</Revit2020InstallDir>
+    <RevitApiDir Condition="'$(RevitApiDir)' == ''">$(Revit2020InstallDir)</RevitApiDir>
+    <RevitApiNuGetVersion Condition="'$(RevitApiNuGetVersion)' == ''">2020.2.1.2001</RevitApiNuGetVersion>
+  </PropertyGroup>
+</Project>

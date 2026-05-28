@@ -1,0 +1,86 @@
+name: Build PlugHub Package
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build package DLLs
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout package repository
+        uses: actions/checkout@v4
+        with:
+          path: PlugHub_Packages
+          fetch-depth: 0
+
+      - name: Checkout PlugHub contracts
+        uses: actions/checkout@v4
+        with:
+          repository: GaoMengGu/PlugHub
+          path: revittool
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Build package DLLs
+        shell: pwsh
+        working-directory: PlugHub_Packages
+        run: .\build.ps1 -UseRevitApiNuGet
+
+      - name: Verify manifest DLL paths
+        shell: pwsh
+        working-directory: PlugHub_Packages
+        run: |
+          $manifest = Get-Content -Raw package.json | ConvertFrom-Json
+          $missing = New-Object System.Collections.Generic.List[string]
+
+          foreach ($module in $manifest.modules) {
+            if (![string]::IsNullOrWhiteSpace($module.assembly) -and !(Test-Path -LiteralPath $module.assembly)) {
+              $missing.Add($module.assembly)
+            }
+
+            foreach ($feature in $module.features) {
+              if (![string]::IsNullOrWhiteSpace($feature.commandAssembly) -and !(Test-Path -LiteralPath $feature.commandAssembly)) {
+                $missing.Add($feature.commandAssembly)
+              }
+            }
+          }
+
+          $missing = $missing | Sort-Object -Unique
+          if ($missing.Count -gt 0) {
+            throw "Manifest references missing DLLs: $($missing -join ', ')"
+          }
+
+      - name: Upload package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: plughub-package
+          if-no-files-found: error
+          path: |
+            PlugHub_Packages/package.json
+            PlugHub_Packages/dist/*.dll
+
+      - name: Commit dist DLLs
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        shell: pwsh
+        working-directory: PlugHub_Packages
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add dist/*.dll
+
+          if ((git status --porcelain) -ne "") {
+            git commit -m "chore: update package binaries"
+            git push
+          }

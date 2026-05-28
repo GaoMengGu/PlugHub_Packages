@@ -1,0 +1,10 @@
+* text=auto
+
+*.cs text
+*.json text
+*.md text
+*.ps1 text
+*.slnx text
+
+*.dll binary
+*.pdb binary
