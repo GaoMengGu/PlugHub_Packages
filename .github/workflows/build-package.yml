@@ -158,3 +158,61 @@ jobs:
           } else {
             gh release create $tagName $env:PACKAGE_ZIP --title $title --notes-file $notesPath --target $releaseTarget
           }
+
+  mirror-gitee:
+    name: Mirror final main to Gitee
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch final GitHub refs
+        run: |
+          set -euo pipefail
+
+          git fetch origin +refs/heads/main:refs/remotes/origin/main --tags --force
+          git checkout -B main origin/main
+
+      - name: Configure SSH for Gitee
+        env:
+          GITEE_PRIVATE_KEY: ${{ secrets.GITEE_PRIVATE_KEY }}
+          GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
+          GITEE_USER: ${{ secrets.GITEE_USER }}
+        run: |
+          set -euo pipefail
+
+          test -n "$GITEE_PRIVATE_KEY"
+          test -n "$GITEE_TOKEN"
+          test -n "$GITEE_USER"
+
+          mkdir -p ~/.ssh
+          printf '%s\n' "$GITEE_PRIVATE_KEY" > ~/.ssh/gitee_key
+          chmod 600 ~/.ssh/gitee_key
+          ssh-keyscan gitee.com >> ~/.ssh/known_hosts
+
+          cat > ~/.ssh/config <<'EOF'
+          Host gitee.com
+            HostName gitee.com
+            User git
+            IdentityFile ~/.ssh/gitee_key
+            IdentitiesOnly yes
+          EOF
+
+          git config user.name "${GITEE_USER:-github-actions[bot]}"
+          git config user.email "${GITEE_USER:-github-actions[bot]}@users.noreply.github.com"
+
+      - name: Push final refs to Gitee
+        run: |
+          set -euo pipefail
+
+          git remote add gitee git@gitee.com:GaoMengGu/PlugHub_Packages.git
+          git push --force gitee HEAD:refs/heads/main
+
+          if git rev-parse -q --verify refs/tags/V1.0.0 >/dev/null; then
+            git push --force gitee refs/tags/V1.0.0:refs/tags/V1.0.0
+          fi
