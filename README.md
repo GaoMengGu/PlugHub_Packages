@@ -98,8 +98,9 @@ dist/
 
 ## 发布流程
 
-- 推送到 `main`：GitHub Actions 构建 DLL、回写 `dist/*.dll`，并以 `v0.0.<run_number>` 版本更新 `latest` Release。
-- 推送 `v*` 标签：GitHub Actions 构建 DLL，并发布对应版本 Release。
+- 推送到 `main`：GitHub Actions 构建 DLL、回写 `dist/*.dll`，并以 `V1.0.0` 更新 GitHub Release。
+- 推送 `V*` 标签：GitHub Actions 构建 DLL，并发布对应版本 Release。
+- `main` 更新后会同步推送到 Gitee 仓库 `GaoMengGu/PlugHub_Packages`。
 - Release ZIP 只包含用户安装所需的 `package.json` 和 `dist/*.dll`。
 
 ## 开发说明

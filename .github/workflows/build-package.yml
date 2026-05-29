@@ -5,7 +5,7 @@ on:
     branches:
       - main
     tags:
-      - "v*"
+      - "V*"
   pull_request:
   workflow_dispatch:
 
@@ -86,9 +86,9 @@ jobs:
           $versionTag = if ("${{ github.ref_type }}" -eq "tag") {
             "${{ github.ref_name }}"
           } else {
-            "v0.0.${{ github.run_number }}"
+            "V1.0.0"
           }
-          $version = if ($versionTag.StartsWith("v")) { $versionTag.Substring(1) } else { $versionTag }
+          $version = if ($versionTag.StartsWith("V") -or $versionTag.StartsWith("v")) { $versionTag.Substring(1) } else { $versionTag }
           $zipName = "PlugHub-Packages-$versionTag.zip"
 
           "PACKAGE_VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
@@ -126,8 +126,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          $tagName = if ("${{ github.ref_type }}" -eq "tag") { "${{ github.ref_name }}" } else { "latest" }
-          $title = if ("${{ github.ref_type }}" -eq "tag") { "PlugHub Packages $env:PACKAGE_VERSION_TAG" } else { "PlugHub Packages $env:PACKAGE_VERSION_TAG (latest)" }
+          $tagName = if ("${{ github.ref_type }}" -eq "tag") { "${{ github.ref_name }}" } else { $env:PACKAGE_VERSION_TAG }
+          $title = "PlugHub Packages $env:PACKAGE_VERSION_TAG"
           $notesPath = "release-notes.md"
           $releaseTarget = (git rev-parse HEAD).Trim()
 
@@ -153,17 +153,8 @@ jobs:
           $releaseExists = $LASTEXITCODE -eq 0
 
           if ($releaseExists) {
-            if ($tagName -eq "latest") {
-              $assetNames = gh release view $tagName --json assets --jq ".assets[].name"
-              foreach ($assetName in $assetNames) {
-                if ($assetName -like "PlugHub-Packages-v*.zip") {
-                  gh release delete-asset $tagName $assetName --yes
-                }
-              }
-            }
-
             gh release upload $tagName $env:PACKAGE_ZIP --clobber
-            gh release edit $tagName --title $title --notes-file $notesPath --latest
+            gh release edit $tagName --title $title --notes-file $notesPath
           } else {
-            gh release create $tagName $env:PACKAGE_ZIP --title $title --notes-file $notesPath --latest --target $releaseTarget
+            gh release create $tagName $env:PACKAGE_ZIP --title $title --notes-file $notesPath --target $releaseTarget
           }

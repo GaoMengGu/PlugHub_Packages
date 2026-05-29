@@ -1,0 +1,71 @@
+name: Mirror to Gitee
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "V*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mirror-gitee-main
+  cancel-in-progress: false
+
+jobs:
+  mirror:
+    name: Push refs to Gitee
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure SSH for Gitee
+        env:
+          GITEE_PRIVATE_KEY: ${{ secrets.GITEE_PRIVATE_KEY }}
+          GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
+          GITEE_USER: ${{ secrets.GITEE_USER }}
+        run: |
+          set -euo pipefail
+
+          test -n "$GITEE_PRIVATE_KEY"
+          test -n "$GITEE_TOKEN"
+          test -n "$GITEE_USER"
+
+          mkdir -p ~/.ssh
+          printf '%s\n' "$GITEE_PRIVATE_KEY" > ~/.ssh/gitee_key
+          chmod 600 ~/.ssh/gitee_key
+          ssh-keyscan gitee.com >> ~/.ssh/known_hosts
+
+          cat > ~/.ssh/config <<'EOF'
+          Host gitee.com
+            HostName gitee.com
+            User git
+            IdentityFile ~/.ssh/gitee_key
+            IdentitiesOnly yes
+          EOF
+
+          git config user.name "${GITEE_USER:-github-actions[bot]}"
+          git config user.email "${GITEE_USER:-github-actions[bot]}@users.noreply.github.com"
+
+      - name: Push main branch
+        if: github.ref == 'refs/heads/main'
+        run: |
+          set -euo pipefail
+
+          git remote add gitee git@gitee.com:GaoMengGu/PlugHub_Packages.git
+          git push --force gitee HEAD:refs/heads/main
+
+      - name: Push release tag
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          set -euo pipefail
+
+          git remote add gitee git@gitee.com:GaoMengGu/PlugHub_Packages.git
+          git push --force gitee "refs/tags/${GITHUB_REF_NAME}:refs/tags/${GITHUB_REF_NAME}"
