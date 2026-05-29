@@ -154,7 +154,7 @@ jobs:
 
           if ($releaseExists) {
             gh release upload $tagName $env:PACKAGE_ZIP --clobber
-            gh release edit $tagName --title $title --notes-file $notesPath
+            gh release edit $tagName --title $title --notes-file $notesPath --target $releaseTarget
           } else {
             gh release create $tagName $env:PACKAGE_ZIP --title $title --notes-file $notesPath --target $releaseTarget
           }
