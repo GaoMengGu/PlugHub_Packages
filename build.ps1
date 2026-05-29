@@ -10,7 +10,8 @@ $ErrorActionPreference = "Stop"
 $Root = (Resolve-Path $PSScriptRoot).Path
 $Projects = @(
     (Join-Path $Root "src\PlugHub.DuctPreferredJunction\PlugHub.DuctPreferredJunction.csproj"),
-    (Join-Path $Root "src\PlugHub.FamilyMaterialParameters\PlugHub.FamilyMaterialParameters.csproj")
+    (Join-Path $Root "src\PlugHub.FamilyMaterialParameters\PlugHub.FamilyMaterialParameters.csproj"),
+    (Join-Path $Root "src\PlugHub.GridVisibility\PlugHub.GridVisibility.csproj")
 )
 
 function Test-RevitApiDir {

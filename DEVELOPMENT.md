@@ -16,6 +16,9 @@ PlugHub_Packages/
     PlugHub.FamilyMaterialParameters/
       FamilyMaterialParametersModule.cs
       BatchAddMaterialParameterCommand.cs
+    PlugHub.GridVisibility/
+      GridVisibilityModule.cs
+      ToggleGridVisibilityCommand.cs
 ```
 
 约定：
@@ -97,6 +100,9 @@ packages/dropins/
   FamilyTools/
     package.json
     dist/PlugHub.FamilyMaterialParameters.dll
+  ViewTools/
+    package.json
+    dist/PlugHub.GridVisibility.dll
 ```
 
 ## 新增插件包步骤

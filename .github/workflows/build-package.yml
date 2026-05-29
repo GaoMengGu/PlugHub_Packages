@@ -64,6 +64,11 @@ jobs:
             throw "Manifest references missing DLLs: $($missing -join ', ')"
           }
 
+      - name: Validate package metadata
+        shell: pwsh
+        working-directory: PlugHub_Packages
+        run: .\tests\Validate-Package.ps1
+
       - name: Upload package artifact
         uses: actions/upload-artifact@v4
         with:

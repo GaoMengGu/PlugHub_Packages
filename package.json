@@ -9,6 +9,38 @@
   },
   "modules": [
     {
+      "id": "plughub.modules.grid-visibility",
+      "assembly": "dist/PlugHub.GridVisibility.dll",
+      "type": "PlugHub.GridVisibility.GridVisibilityModule",
+      "name": "视图工具",
+      "displayName": "视图工具",
+      "description": "当前视图轴网显示控制工具。",
+      "sourceId": "plughub-packages",
+      "enabled": true,
+      "visible": true,
+      "order": 200,
+      "tags": ["view", "grid", "visibility", "revit-api"],
+      "dependsOn": [],
+      "features": [
+        {
+          "id": "plughub.modules.grid-visibility.toggle",
+          "name": "切换轴网可见性",
+          "displayName": "轴网显隐切换",
+          "description": "在当前视图中切换轴网类别的可见性。",
+          "category": "view",
+          "group": "视图工具",
+          "tags": ["view", "grid", "visibility", "frequent"],
+          "order": 210,
+          "defaultState": "Visible",
+          "buttonSize": "large",
+          "iconPath": "",
+          "commandKey": "plughub.modules.grid-visibility.toggle",
+          "commandAssembly": "dist/PlugHub.GridVisibility.dll",
+          "commandType": "PlugHub.GridVisibility.ToggleGridVisibilityCommand"
+        }
+      ]
+    },
+    {
       "id": "plughub.modules.duct-preferred-junction",
       "assembly": "dist/PlugHub.DuctPreferredJunction.dll",
       "type": "PlugHub.DuctPreferredJunction.DuctPreferredJunctionModule",

@@ -1,4 +1,5 @@
 <Solution>
   <Project Path="src/PlugHub.DuctPreferredJunction/PlugHub.DuctPreferredJunction.csproj" />
   <Project Path="src/PlugHub.FamilyMaterialParameters/PlugHub.FamilyMaterialParameters.csproj" />
+  <Project Path="src/PlugHub.GridVisibility/PlugHub.GridVisibility.csproj" />
 </Solution>
