@@ -19,6 +19,9 @@ PlugHub_Packages/
     PlugHub.GridVisibility/
       GridVisibilityModule.cs
       ToggleGridVisibilityCommand.cs
+    PlugHub.LevelVisibility/
+      LevelVisibilityModule.cs
+      ToggleLevelVisibilityCommand.cs
 ```
 
 约定：
@@ -103,6 +106,7 @@ packages/dropins/
   ViewTools/
     package.json
     dist/PlugHub.GridVisibility.dll
+    dist/PlugHub.LevelVisibility.dll
 ```
 
 ## 新增插件包步骤

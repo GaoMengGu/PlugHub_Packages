@@ -3,10 +3,10 @@ using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 
-namespace PlugHub.GridVisibility
+namespace PlugHub.LevelVisibility
 {
     [Transaction(TransactionMode.Manual)]
-    public sealed class ToggleGridVisibilityCommand : IExternalCommand
+    public sealed class ToggleLevelVisibilityCommand : IExternalCommand
     {
         public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
         {
@@ -25,20 +25,20 @@ namespace PlugHub.GridVisibility
                 return Result.Failed;
             }
 
-            var gridCategoryId = new ElementId(BuiltInCategory.OST_Grids);
-            if (!view.CanCategoryBeHidden(gridCategoryId))
+            var levelCategoryId = new ElementId(BuiltInCategory.OST_Levels);
+            if (!view.CanCategoryBeHidden(levelCategoryId))
             {
-                message = "当前视图不支持隐藏轴网类别。";
+                message = "当前视图不支持隐藏标高类别。";
                 return Result.Failed;
             }
 
             try
             {
-                var shouldHide = !view.GetCategoryHidden(gridCategoryId);
-                using (var transaction = new Transaction(document, shouldHide ? "隐藏轴网" : "显示轴网"))
+                var shouldHide = !view.GetCategoryHidden(levelCategoryId);
+                using (var transaction = new Transaction(document, shouldHide ? "隐藏标高" : "显示标高"))
                 {
                     transaction.Start();
-                    view.SetCategoryHidden(gridCategoryId, shouldHide);
+                    view.SetCategoryHidden(levelCategoryId, shouldHide);
                     transaction.Commit();
                 }
 
