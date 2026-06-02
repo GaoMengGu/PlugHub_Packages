@@ -31,7 +31,7 @@ function Require-Text {
         return
     }
 
-    $text = Get-Content -Raw -LiteralPath $path
+    $text = Get-Content -Raw -Encoding UTF8 -LiteralPath $path
     if ($text -notmatch [regex]::Escape($Pattern)) {
         Add-Failure "$Description was not found in $RelativePath"
     }
@@ -50,9 +50,34 @@ function Reject-Text {
         return
     }
 
-    $text = Get-Content -Raw -LiteralPath $path
+    $text = Get-Content -Raw -Encoding UTF8 -LiteralPath $path
     if ($text -match [regex]::Escape($Pattern)) {
         Add-Failure "$Description was found in $RelativePath"
+    }
+}
+
+function Test-JsonProperty {
+    param(
+        [object]$Value,
+        [string]$Name
+    )
+
+    if ($null -eq $Value) {
+        return $false
+    }
+
+    return @($Value.PSObject.Properties | ForEach-Object { $_.Name }) -contains $Name
+}
+
+function Reject-JsonProperty {
+    param(
+        [object]$Value,
+        [string]$Name,
+        [string]$Description
+    )
+
+    if (Test-JsonProperty $Value $Name) {
+        Add-Failure "$Description must not define $Name"
     }
 }
 
@@ -61,7 +86,33 @@ if (!(Test-Path -LiteralPath $manifestPath)) {
     Add-Failure "Missing package.json"
 }
 else {
-    $manifest = Get-Content -Raw -LiteralPath $manifestPath | ConvertFrom-Json
+    $manifest = Get-Content -Raw -Encoding UTF8 -LiteralPath $manifestPath | ConvertFrom-Json
+    if ($manifest.version -ne "V1.0.0") {
+        Add-Failure "package.json version must be V1.0.0"
+    }
+    if (@($manifest.revitVersions) -notcontains "2020") {
+        Add-Failure "package.json revitVersions must include 2020"
+    }
+    if ($manifest.frameworkVersionRange -ne ">=1.3.0") {
+        Add-Failure "package.json frameworkVersionRange must be >=1.3.0"
+    }
+
+    foreach ($property in @("packageDirectories", "moduleSources", "repositories", "conflictPolicy")) {
+        Reject-JsonProperty $manifest $property "package.json root"
+    }
+
+    foreach ($module in @($manifest.modules)) {
+        foreach ($property in @("type", "name", "sourceId", "resolvedBaseDirectory", "dependsOn")) {
+            Reject-JsonProperty $module $property "Module $($module.id)"
+        }
+
+        foreach ($feature in @($module.features)) {
+            foreach ($property in @("name", "commandKey")) {
+                Reject-JsonProperty $feature $property "Feature $($feature.id)"
+            }
+        }
+    }
+
     $gridModule = $manifest.modules | Where-Object { $_.id -eq "plughub.modules.grid-visibility" } | Select-Object -First 1
     if ($null -eq $gridModule) {
         Add-Failure "Missing grid visibility module in package.json"
@@ -70,17 +121,14 @@ else {
         if ($gridModule.assembly -ne "dist/PlugHub.GridVisibility.dll") {
             Add-Failure "Grid visibility module assembly must be dist/PlugHub.GridVisibility.dll"
         }
-        if ($gridModule.type -ne "PlugHub.GridVisibility.GridVisibilityModule") {
-            Add-Failure "Grid visibility module type must be PlugHub.GridVisibility.GridVisibilityModule"
-        }
 
         $feature = $gridModule.features | Where-Object { $_.id -eq "plughub.modules.grid-visibility.toggle" } | Select-Object -First 1
         if ($null -eq $feature) {
             Add-Failure "Missing grid visibility toggle feature in package.json"
         }
         else {
-            if ($feature.displayName -ne "轴网显隐切换") {
-                Add-Failure "Grid visibility feature displayName must be 轴网显隐切换"
+            if ($feature.displayName -ne (ConvertFrom-Json '"\u8f74\u7f51\u663e\u9690\u5207\u6362"')) {
+                Add-Failure "Grid visibility feature displayName must match the manifest display name"
             }
             if ($feature.commandAssembly -ne "dist/PlugHub.GridVisibility.dll") {
                 Add-Failure "Grid visibility feature commandAssembly must be dist/PlugHub.GridVisibility.dll"
@@ -99,17 +147,14 @@ else {
         if ($levelModule.assembly -ne "dist/PlugHub.LevelVisibility.dll") {
             Add-Failure "Level visibility module assembly must be dist/PlugHub.LevelVisibility.dll"
         }
-        if ($levelModule.type -ne "PlugHub.LevelVisibility.LevelVisibilityModule") {
-            Add-Failure "Level visibility module type must be PlugHub.LevelVisibility.LevelVisibilityModule"
-        }
 
         $feature = $levelModule.features | Where-Object { $_.id -eq "plughub.modules.level-visibility.toggle" } | Select-Object -First 1
         if ($null -eq $feature) {
             Add-Failure "Missing level visibility toggle feature in package.json"
         }
         else {
-            if ($feature.displayName -ne "标高显隐切换") {
-                Add-Failure "Level visibility feature displayName must be 标高显隐切换"
+            if ($feature.displayName -ne (ConvertFrom-Json '"\u6807\u9ad8\u663e\u9690\u5207\u6362"')) {
+                Add-Failure "Level visibility feature displayName must match the manifest display name"
             }
             if ($feature.commandAssembly -ne "dist/PlugHub.LevelVisibility.dll") {
                 Add-Failure "Level visibility feature commandAssembly must be dist/PlugHub.LevelVisibility.dll"
