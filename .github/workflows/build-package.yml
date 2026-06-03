@@ -246,9 +246,9 @@ jobs:
           }
 
   mirror-gitee:
-    name: Mirror final main to Gitee
+    name: Mirror final refs and release to Gitee
     needs: build
-    if: github.actor != 'github-actions[bot]' && github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    if: github.event_name != 'pull_request' && github.actor != 'github-actions[bot]' && needs.build.outputs.version_tag != ''
     runs-on: ubuntu-latest
 
     steps:
@@ -262,7 +262,12 @@ jobs:
           set -euo pipefail
 
           git fetch origin +refs/heads/main:refs/remotes/origin/main --tags --force
-          git checkout -B main origin/main
+          version_tag="${{ needs.build.outputs.version_tag }}"
+          if [ "${GITHUB_REF}" = "refs/heads/main" ]; then
+            git checkout -B main origin/main
+          else
+            git checkout --detach "refs/tags/$version_tag"
+          fi
 
       - name: Configure SSH for Gitee
         env:
@@ -297,9 +302,107 @@ jobs:
           set -euo pipefail
 
           git remote add gitee git@gitee.com:GaoMengGu/PlugHub_Packages.git
-          git push --force gitee HEAD:refs/heads/main
 
           version_tag="${{ needs.build.outputs.version_tag }}"
+          if [ "${GITHUB_REF}" = "refs/heads/main" ]; then
+            git push --force gitee origin/main:refs/heads/main
+          fi
+
           if [ -n "$version_tag" ] && git rev-parse -q --verify "refs/tags/$version_tag" >/dev/null; then
             git push --force gitee "refs/tags/$version_tag:refs/tags/$version_tag"
           fi
+
+      - name: Sync Gitee release asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          command -v curl >/dev/null
+          command -v gh >/dev/null
+          command -v jq >/dev/null
+
+          version_tag="${{ needs.build.outputs.version_tag }}"
+          zip_name="PlugHub-Packages-$version_tag.zip"
+          api="https://gitee.com/api/v5/repos/GaoMengGu/PlugHub_Packages"
+          target_commit="$(git rev-parse HEAD)"
+          title="PlugHub Packages $version_tag"
+          notes_file="gitee-release-notes.md"
+
+          cat > "$notes_file" <<EOF
+          PlugHub 外部插件包发布包。
+
+          版本：$version_tag
+
+          安装方式：
+          1. 下载并解压 $zip_name。
+          2. 将解压得到的 PlugHub_Packages 文件夹放入 PlugHub 的 packages/dropins 目录。
+          3. 重启 Revit 或重新加载 PlugHub。
+
+          也可以在 PlugHub 的 config\sources.json 中配置 Gitee 来源 GaoMengGu/PlugHub_Packages。
+          EOF
+          release_body="$(cat "$notes_file")"
+
+          mkdir -p release-sync
+          gh release download "$version_tag" \
+            --repo "$GITHUB_REPOSITORY" \
+            --pattern "$zip_name" \
+            --dir release-sync \
+            --clobber
+          test -f "release-sync/$zip_name"
+
+          release_response="$(mktemp)"
+          release_status="$(
+            curl -sS -o "$release_response" -w "%{http_code}" \
+              --get \
+              --data-urlencode "access_token=$GITEE_TOKEN" \
+              "$api/releases/tags/$version_tag"
+          )"
+
+          if [ "$release_status" = "200" ]; then
+            release_id="$(jq -r '.id' "$release_response")"
+            curl -sS -f -X PATCH "$api/releases/$release_id" \
+              -F "access_token=$GITEE_TOKEN" \
+              -F "tag_name=$version_tag" \
+              -F "name=$title" \
+              -F "body=$release_body" \
+              -F "prerelease=false" >/dev/null
+          elif [ "$release_status" = "404" ]; then
+            create_response="$(mktemp)"
+            curl -sS -f -X POST "$api/releases" \
+              -F "access_token=$GITEE_TOKEN" \
+              -F "tag_name=$version_tag" \
+              -F "name=$title" \
+              -F "body=$release_body" \
+              -F "target_commitish=$target_commit" \
+              -F "prerelease=false" > "$create_response"
+            release_id="$(jq -r '.id' "$create_response")"
+          else
+            cat "$release_response"
+            echo "Failed to query Gitee release $version_tag: HTTP $release_status" >&2
+            exit 1
+          fi
+
+          test -n "$release_id"
+          test "$release_id" != "null"
+
+          attachments_response="$(mktemp)"
+          curl -sS -f --get \
+            --data-urlencode "access_token=$GITEE_TOKEN" \
+            --data-urlencode "per_page=100" \
+            "$api/releases/$release_id/attach_files" > "$attachments_response"
+
+          jq -r --arg name "$zip_name" '.[] | select((.name // .filename // .file_name // .path // "") == $name) | .id' "$attachments_response" |
+            while read -r attachment_id; do
+              if [ -n "$attachment_id" ] && [ "$attachment_id" != "null" ]; then
+                curl -sS -f -X DELETE \
+                  --get \
+                  --data-urlencode "access_token=$GITEE_TOKEN" \
+                  "$api/releases/$release_id/attach_files/$attachment_id" >/dev/null
+              fi
+            done
+
+          curl -sS -f -X POST "$api/releases/$release_id/attach_files" \
+            -F "access_token=$GITEE_TOKEN" \
+            -F "file=@release-sync/$zip_name" >/dev/null

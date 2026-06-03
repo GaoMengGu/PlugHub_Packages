@@ -107,7 +107,7 @@ dist/
 
 - 推送到 `main`：GitHub Actions 构建 DLL，基于当前 `package.json` 或最新 `V*` 标签自动递增补丁版本，回写 `package.json`、`dist/*.dll` 和 `icons/*.png`，并发布对应 Release。
 - 推送 `V*` 标签或手动运行 workflow 并填写版本：GitHub Actions 构建 DLL，并按声明版本发布 Release。
-- `main` 更新后会同步推送到 Gitee 仓库 `GaoMengGu/PlugHub_Packages`。
+- `main` 更新后会同步推送到 Gitee 仓库 `GaoMengGu/PlugHub_Packages`，并同步对应 Gitee Release 的 ZIP 资产。
 - Release ZIP 只包含用户安装所需的 `package.json`、`dist/*.dll` 和 `icons/*.png`。
 
 ## 开发说明
