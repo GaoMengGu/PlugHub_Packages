@@ -205,6 +205,33 @@ else {
         }
     }
 
+    $referencePlaneModule = $manifest.modules | Where-Object { $_.id -eq "plughub.modules.reference-plane-visibility" } | Select-Object -First 1
+    if ($null -eq $referencePlaneModule) {
+        Add-Failure "Missing reference plane visibility module in package.json"
+    }
+    else {
+        if ($referencePlaneModule.assembly -ne "dist/PlugHub.ReferencePlaneVisibility.dll") {
+            Add-Failure "Reference plane visibility module assembly must be dist/PlugHub.ReferencePlaneVisibility.dll"
+        }
+
+        $feature = $referencePlaneModule.features | Where-Object { $_.id -eq "plughub.modules.reference-plane-visibility.toggle" } | Select-Object -First 1
+        if ($null -eq $feature) {
+            Add-Failure "Missing reference plane visibility toggle feature in package.json"
+        }
+        else {
+            if ($feature.displayName -ne (ConvertFrom-Json '"\u53c2\u7167\u5e73\u9762\u663e\u9690\u5207\u6362"')) {
+                Add-Failure "Reference plane visibility feature displayName must match the manifest display name"
+            }
+            if ($feature.commandAssembly -ne "dist/PlugHub.ReferencePlaneVisibility.dll") {
+                Add-Failure "Reference plane visibility feature commandAssembly must be dist/PlugHub.ReferencePlaneVisibility.dll"
+            }
+            if ($feature.commandType -ne "PlugHub.ReferencePlaneVisibility.ToggleReferencePlaneVisibilityCommand") {
+                Add-Failure "Reference plane visibility feature commandType must be PlugHub.ReferencePlaneVisibility.ToggleReferencePlaneVisibilityCommand"
+            }
+            Require-FeatureIcon $feature "icons/reference-plane-visibility.png"
+        }
+    }
+
     $ductModule = $manifest.modules | Where-Object { $_.id -eq "plughub.modules.duct-preferred-junction" } | Select-Object -First 1
     if ($null -eq $ductModule) {
         Add-Failure "Missing duct preferred junction module in package.json"
@@ -253,6 +280,16 @@ Require-Text "src\PlugHub.LevelVisibility\ToggleLevelVisibilityCommand.cs" "SetC
 Reject-Text "src\PlugHub.LevelVisibility\ToggleLevelVisibilityCommand.cs" "TaskDialog.Show" "Level visibility success popup"
 Require-Text "build.ps1" "src\PlugHub.LevelVisibility\PlugHub.LevelVisibility.csproj" "Level visibility project build registration"
 Require-Text "PlugHub_Packages.slnx" "src/PlugHub.LevelVisibility/PlugHub.LevelVisibility.csproj" "Level visibility solution registration"
+
+Require-File "src\PlugHub.ReferencePlaneVisibility\PlugHub.ReferencePlaneVisibility.csproj"
+Require-File "src\PlugHub.ReferencePlaneVisibility\ReferencePlaneVisibilityModule.cs"
+Require-File "src\PlugHub.ReferencePlaneVisibility\ToggleReferencePlaneVisibilityCommand.cs"
+Require-Text "src\PlugHub.ReferencePlaneVisibility\ToggleReferencePlaneVisibilityCommand.cs" "BuiltInCategory.OST_CLines" "Reference plane category API"
+Require-Text "src\PlugHub.ReferencePlaneVisibility\ToggleReferencePlaneVisibilityCommand.cs" "GetCategoryHidden" "Current reference plane visibility read"
+Require-Text "src\PlugHub.ReferencePlaneVisibility\ToggleReferencePlaneVisibilityCommand.cs" "SetCategoryHidden" "Reference plane visibility toggle write"
+Reject-Text "src\PlugHub.ReferencePlaneVisibility\ToggleReferencePlaneVisibilityCommand.cs" "TaskDialog.Show" "Reference plane visibility success popup"
+Require-Text "build.ps1" "src\PlugHub.ReferencePlaneVisibility\PlugHub.ReferencePlaneVisibility.csproj" "Reference plane visibility project build registration"
+Require-Text "PlugHub_Packages.slnx" "src/PlugHub.ReferencePlaneVisibility/PlugHub.ReferencePlaneVisibility.csproj" "Reference plane visibility solution registration"
 Reject-Text "package.json" "builtin:" "Built-in icon reference"
 Reject-Text "package.json" "Tee/Tap" "Duct preferred junction old Tee/Tap wording"
 

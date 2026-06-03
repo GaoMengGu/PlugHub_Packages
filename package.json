@@ -57,6 +57,32 @@
       ]
     },
     {
+      "id": "plughub.modules.reference-plane-visibility",
+      "assembly": "dist/PlugHub.ReferencePlaneVisibility.dll",
+      "displayName": "视图工具",
+      "description": "当前视图参照平面显示控制工具。",
+      "enabled": true,
+      "visible": true,
+      "order": 240,
+      "tags": ["view", "reference-plane", "visibility", "revit-api"],
+      "features": [
+        {
+          "id": "plughub.modules.reference-plane-visibility.toggle",
+          "displayName": "参照平面显隐切换",
+          "description": "在当前视图中切换参照平面类别的可见性。",
+          "category": "view",
+          "group": "视图工具",
+          "tags": ["view", "reference-plane", "visibility", "frequent"],
+          "order": 240,
+          "defaultState": "Visible",
+          "buttonSize": "large",
+          "iconPath": "icons/reference-plane-visibility.png",
+          "commandAssembly": "dist/PlugHub.ReferencePlaneVisibility.dll",
+          "commandType": "PlugHub.ReferencePlaneVisibility.ToggleReferencePlaneVisibilityCommand"
+        }
+      ]
+    },
+    {
       "id": "plughub.modules.duct-preferred-junction",
       "assembly": "dist/PlugHub.DuctPreferredJunction.dll",
       "displayName": "机电风管",

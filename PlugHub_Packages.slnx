@@ -3,4 +3,5 @@
   <Project Path="src/PlugHub.FamilyMaterialParameters/PlugHub.FamilyMaterialParameters.csproj" />
   <Project Path="src/PlugHub.GridVisibility/PlugHub.GridVisibility.csproj" />
   <Project Path="src/PlugHub.LevelVisibility/PlugHub.LevelVisibility.csproj" />
+  <Project Path="src/PlugHub.ReferencePlaneVisibility/PlugHub.ReferencePlaneVisibility.csproj" />
 </Solution>
