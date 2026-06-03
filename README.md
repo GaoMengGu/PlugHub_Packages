@@ -66,50 +66,6 @@ packages/dropins/PlugHub_Packages/
 
 PlugHub 会克隆仓库缓存，并读取仓库中的 `package.json` 和 `dist/*.dll`。因此本仓库保留 `dist` DLL，`bin/obj` 和 PDB 文件不进入版本库。
 
-### 方式三：本地源码目录
-
-开发调试时，可以直接把本仓库目录配置为本地来源。请将示例中的路径替换为你自己的本地仓库路径：
-
-```json
-{
-  "id": "local-plughub-packages",
-  "type": "localFolder",
-  "path": "D:/path/to/PlugHub_Packages",
-  "manifestPath": "package.json",
-  "enabled": true,
-  "autoUpdate": false
-}
-```
-
-运行构建后，PlugHub 会从本地 `dist` 目录加载最新 DLL。
-
-## 本地构建
-
-本仓库面向 Revit 2020 和 .NET Framework 4.8。普通本地构建需要安装 Revit 2020，或至少提供 `RevitAPI.dll` 和 `RevitAPIUI.dll`。
-
-```powershell
-.\build.ps1 -RevitApiDir "D:\Program Files\Autodesk\Revit 2020"
-```
-
-CI 环境没有安装 Revit，使用 NuGet 编译引用：
-
-```powershell
-.\build.ps1 -UseRevitApiNuGet
-```
-
-构建输出位于：
-
-```text
-dist/
-```
-
-## 发布流程
-
-- 推送到 `main`：GitHub Actions 构建 DLL，基于当前 `package.json` 或最新 `V*` 标签自动递增补丁版本，回写 `package.json`、`dist/*.dll` 和 `icons/*.png`，并发布对应 Release。
-- 推送 `V*` 标签或手动运行 workflow 并填写版本：GitHub Actions 构建 DLL，并按声明版本发布 Release。
-- `main` 更新后会同步推送到 Gitee 仓库 `GaoMengGu/PlugHub_Packages`，并同步对应 Gitee Release 的 ZIP 资产。
-- Release ZIP 只包含用户安装所需的 `package.json`、`dist/*.dll` 和 `icons/*.png`。
-
 ## 开发说明
 
 新增插件包时，通常需要：
@@ -119,6 +75,7 @@ dist/
 3. 创建模块描述类，实现 `IPlugHubModule`。
 4. 创建命令类，实现 Revit 的 `IExternalCommand`。
 5. 在 `package.json` 中新增模块和功能记录。
-6. 运行 `build.ps1`，确认 DLL 输出到 `dist`。
+
+如果使用 AI agent 辅助编写插件，推荐尝试安装并使用 [GaoMengGu/PlugHub_Packages_skill](https://github.com/GaoMengGu/PlugHub_Packages_skill)，让 agent 按本仓库约定生成模块代码、清单记录和验证步骤。
 
 更多目录约定和清单字段说明见 [DEVELOPMENT.md](DEVELOPMENT.md)。
