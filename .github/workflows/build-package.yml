@@ -326,9 +326,21 @@ jobs:
           version_tag="${{ needs.build.outputs.version_tag }}"
           zip_name="PlugHub-Packages-$version_tag.zip"
           api="https://gitee.com/api/v5/repos/GaoMengGu/PlugHub_Packages"
-          target_commit="$(git rev-parse HEAD)"
+          target_commitish="main"
           title="PlugHub Packages $version_tag"
           notes_file="gitee-release-notes.md"
+          encoded_token="$(jq -rn --arg token "$GITEE_TOKEN" '$token|@uri')"
+
+          fail_gitee() {
+            local message="$1"
+            local response_file="${2:-}"
+
+            echo "::error title=Gitee release sync::$message"
+            if [ -n "$response_file" ] && [ -s "$response_file" ]; then
+              cat "$response_file"
+            fi
+            exit 1
+          }
 
           cat > "$notes_file" <<EOF
           PlugHub 外部插件包发布包。
@@ -345,11 +357,13 @@ jobs:
           release_body="$(cat "$notes_file")"
 
           mkdir -p release-sync
-          gh release download "$version_tag" \
+          if ! gh release download "$version_tag" \
             --repo "$GITHUB_REPOSITORY" \
             --pattern "$zip_name" \
             --dir release-sync \
-            --clobber
+            --clobber; then
+            fail_gitee "Failed to download GitHub release asset $zip_name"
+          fi
           test -f "release-sync/$zip_name"
 
           release_response="$(mktemp)"
@@ -361,48 +375,85 @@ jobs:
           )"
 
           if [ "$release_status" = "200" ]; then
-            release_id="$(jq -r '.id' "$release_response")"
-            curl -sS -f -X PATCH "$api/releases/$release_id" \
-              -F "access_token=$GITEE_TOKEN" \
-              -F "tag_name=$version_tag" \
-              -F "name=$title" \
-              -F "body=$release_body" \
-              -F "prerelease=false" >/dev/null
+            release_id="$(jq -er '.id' "$release_response")" || fail_gitee "Gitee release response has no id" "$release_response"
+            update_response="$(mktemp)"
+            update_status="$(
+              curl -sS -o "$update_response" -w "%{http_code}" \
+                -X PATCH "$api/releases/$release_id" \
+                --data-urlencode "access_token=$GITEE_TOKEN" \
+                --data-urlencode "tag_name=$version_tag" \
+                --data-urlencode "name=$title" \
+                --data-urlencode "body=$release_body" \
+                --data-urlencode "prerelease=false"
+            )"
+            if [ "$update_status" != "200" ]; then
+              fail_gitee "Failed to update Gitee release $version_tag: HTTP $update_status" "$update_response"
+            fi
           elif [ "$release_status" = "404" ]; then
             create_response="$(mktemp)"
-            curl -sS -f -X POST "$api/releases" \
-              -F "access_token=$GITEE_TOKEN" \
-              -F "tag_name=$version_tag" \
-              -F "name=$title" \
-              -F "body=$release_body" \
-              -F "target_commitish=$target_commit" \
-              -F "prerelease=false" > "$create_response"
-            release_id="$(jq -r '.id' "$create_response")"
+            create_status="$(
+              curl -sS -o "$create_response" -w "%{http_code}" \
+                -X POST "$api/releases" \
+                --data-urlencode "access_token=$GITEE_TOKEN" \
+                --data-urlencode "tag_name=$version_tag" \
+                --data-urlencode "name=$title" \
+                --data-urlencode "body=$release_body" \
+                --data-urlencode "target_commitish=$target_commitish" \
+                --data-urlencode "prerelease=false"
+            )"
+            if [ "$create_status" != "200" ] && [ "$create_status" != "201" ]; then
+              fail_gitee "Failed to create Gitee release $version_tag: HTTP $create_status" "$create_response"
+            fi
+            release_id="$(jq -er '.id' "$create_response")" || fail_gitee "Created Gitee release response has no id" "$create_response"
           else
-            cat "$release_response"
-            echo "Failed to query Gitee release $version_tag: HTTP $release_status" >&2
-            exit 1
+            fail_gitee "Failed to query Gitee release $version_tag: HTTP $release_status" "$release_response"
           fi
 
           test -n "$release_id"
           test "$release_id" != "null"
 
           attachments_response="$(mktemp)"
-          curl -sS -f --get \
-            --data-urlencode "access_token=$GITEE_TOKEN" \
-            --data-urlencode "per_page=100" \
-            "$api/releases/$release_id/attach_files" > "$attachments_response"
+          attachments_status="$(
+            curl -sS -o "$attachments_response" -w "%{http_code}" \
+              --get \
+              --data-urlencode "access_token=$GITEE_TOKEN" \
+              --data-urlencode "per_page=100" \
+              "$api/releases/$release_id/attach_files"
+          )"
+          if [ "$attachments_status" != "200" ]; then
+            fail_gitee "Failed to list Gitee release attachments for $version_tag: HTTP $attachments_status" "$attachments_response"
+          fi
 
-          jq -r --arg name "$zip_name" '.[] | select((.name // .filename // .file_name // .path // "") == $name) | .id' "$attachments_response" |
+          jq -r --arg name "$zip_name" '
+            def items:
+              if type == "array" then .
+              elif type == "object" and (.attach_files | type) == "array" then .attach_files
+              elif type == "object" and (.data | type) == "array" then .data
+              else [] end;
+            items[] | select((.name // .filename // .file_name // .path // "") == $name) | .id
+          ' "$attachments_response" |
             while read -r attachment_id; do
               if [ -n "$attachment_id" ] && [ "$attachment_id" != "null" ]; then
-                curl -sS -f -X DELETE \
-                  --get \
-                  --data-urlencode "access_token=$GITEE_TOKEN" \
-                  "$api/releases/$release_id/attach_files/$attachment_id" >/dev/null
+                delete_response="$(mktemp)"
+                delete_status="$(
+                  curl -sS -o "$delete_response" -w "%{http_code}" \
+                    -X DELETE \
+                    "$api/releases/$release_id/attach_files/$attachment_id?access_token=$encoded_token"
+                )"
+                if [ "$delete_status" != "200" ] && [ "$delete_status" != "204" ]; then
+                  fail_gitee "Failed to delete existing Gitee release attachment $attachment_id: HTTP $delete_status" "$delete_response"
+                fi
               fi
             done
 
-          curl -sS -f -X POST "$api/releases/$release_id/attach_files" \
-            -F "access_token=$GITEE_TOKEN" \
-            -F "file=@release-sync/$zip_name" >/dev/null
+          upload_response="$(mktemp)"
+          upload_status="$(
+            curl -sS -o "$upload_response" -w "%{http_code}" \
+              -X POST "$api/releases/$release_id/attach_files?access_token=$encoded_token" \
+              -F "file=@release-sync/$zip_name"
+          )"
+          if [ "$upload_status" != "200" ] && [ "$upload_status" != "201" ]; then
+            fail_gitee "Failed to upload $zip_name to Gitee release $version_tag: HTTP $upload_status" "$upload_response"
+          fi
+
+          jq -e . "$upload_response" >/dev/null || fail_gitee "Gitee attachment upload response is not valid JSON" "$upload_response"
