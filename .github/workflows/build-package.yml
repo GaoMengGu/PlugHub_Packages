@@ -8,6 +8,11 @@ on:
       - "V*"
   pull_request:
   workflow_dispatch:
+    inputs:
+      version:
+        description: "Optional explicit version tag, for example V1.2.3. Leave empty to auto-increment."
+        required: false
+        type: string
 
 permissions:
   contents: write
@@ -16,6 +21,8 @@ jobs:
   build:
     name: Build package DLLs
     runs-on: windows-latest
+    outputs:
+      version_tag: ${{ steps.version.outputs.version_tag }}
 
     steps:
       - name: Checkout package repository
@@ -39,6 +46,94 @@ jobs:
         shell: pwsh
         working-directory: PlugHub_Packages
         run: .\build.ps1 -UseRevitApiNuGet
+
+      - name: Resolve package version
+        id: version
+        if: github.event_name != 'pull_request' && github.actor != 'github-actions[bot]'
+        shell: pwsh
+        working-directory: PlugHub_Packages
+        run: |
+          function Normalize-VersionTag {
+            param([string]$Value)
+
+            $text = $Value.Trim()
+            if ([string]::IsNullOrWhiteSpace($text)) {
+              return ""
+            }
+
+            if (!$text.StartsWith("V") -and !$text.StartsWith("v")) {
+              $text = "V$text"
+            }
+
+            if ($text -notmatch '^[Vv]\d+\.\d+\.\d+$') {
+              throw "Version must match V<major>.<minor>.<patch>: $Value"
+            }
+
+            return "V$($text.Substring(1))"
+          }
+
+          function Convert-VersionTag {
+            param([string]$Value)
+
+            return [version]$Value.Substring(1)
+          }
+
+          $declaredVersion = ""
+          if ("${{ github.ref_type }}" -eq "tag") {
+            $declaredVersion = "${{ github.ref_name }}"
+          } elseif ("${{ github.event_name }}" -eq "workflow_dispatch") {
+            $declaredVersion = "${{ github.event.inputs.version }}"
+          }
+
+          $versionTag = Normalize-VersionTag $declaredVersion
+          if ([string]::IsNullOrWhiteSpace($versionTag)) {
+            git fetch origin --tags --force
+
+            $manifest = Get-Content -Raw -Encoding UTF8 -LiteralPath "package.json" | ConvertFrom-Json
+            $manifestVersion = Normalize-VersionTag $manifest.version
+            $tagVersions = New-Object System.Collections.Generic.List[string]
+
+            git tag --list "V*" | ForEach-Object {
+              $rawTag = $_.Trim()
+              if ($rawTag -match '^[Vv]\d+\.\d+\.\d+$') {
+                $tagVersions.Add((Normalize-VersionTag $rawTag))
+              }
+            }
+
+            if ($tagVersions.Count -eq 0) {
+              $versionTag = if ([string]::IsNullOrWhiteSpace($manifestVersion)) { "V1.0.0" } else { $manifestVersion }
+            } else {
+              $latestTagVersion = $tagVersions |
+                Sort-Object { Convert-VersionTag $_ } |
+                Select-Object -Last 1
+              $latestTag = Convert-VersionTag $latestTagVersion
+              $manifestSemVer = if ([string]::IsNullOrWhiteSpace($manifestVersion)) { $null } else { Convert-VersionTag $manifestVersion }
+
+              if ($manifestSemVer -ne $null -and $manifestSemVer.CompareTo($latestTag) -gt 0) {
+                $versionTag = $manifestVersion
+              } else {
+                $versionTag = "V{0}.{1}.{2}" -f $latestTag.Major, $latestTag.Minor, ($latestTag.Build + 1)
+              }
+            }
+          }
+
+          $version = $versionTag.Substring(1)
+          $manifestText = Get-Content -Raw -Encoding UTF8 -LiteralPath "package.json"
+          if ($manifestText -notmatch '"version"\s*:\s*"[^"]+"') {
+            throw "package.json must contain a root version field."
+          }
+
+          $manifestText = [regex]::Replace(
+            $manifestText,
+            '"version"\s*:\s*"[^"]+"',
+            ('"version": "{0}"' -f $versionTag),
+            1)
+          Set-Content -LiteralPath "package.json" -Value $manifestText -Encoding UTF8 -NoNewline
+
+          "PACKAGE_VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "PACKAGE_VERSION_TAG=$versionTag" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "PACKAGE_ZIP=PlugHub-Packages-$versionTag.zip" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "version_tag=$versionTag" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
 
       - name: Verify manifest DLL paths
         shell: pwsh
@@ -77,45 +172,36 @@ jobs:
           path: |
             PlugHub_Packages/package.json
             PlugHub_Packages/dist/*.dll
+            PlugHub_Packages/icons/*.png
 
       - name: Package release zip
         if: github.event_name != 'pull_request' && github.actor != 'github-actions[bot]'
         shell: pwsh
         working-directory: PlugHub_Packages
         run: |
-          $versionTag = if ("${{ github.ref_type }}" -eq "tag") {
-            "${{ github.ref_name }}"
-          } else {
-            "V1.0.0"
-          }
-          $version = if ($versionTag.StartsWith("V") -or $versionTag.StartsWith("v")) { $versionTag.Substring(1) } else { $versionTag }
-          $zipName = "PlugHub-Packages-$versionTag.zip"
-
-          "PACKAGE_VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          "PACKAGE_VERSION_TAG=$versionTag" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          "PACKAGE_ZIP=$zipName" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-
           $packageRoot = Join-Path "release" "PlugHub_Packages"
           if (Test-Path -LiteralPath "release") {
             Remove-Item -LiteralPath "release" -Recurse -Force
           }
 
           New-Item -ItemType Directory -Force -Path (Join-Path $packageRoot "dist") | Out-Null
+          New-Item -ItemType Directory -Force -Path (Join-Path $packageRoot "icons") | Out-Null
           Copy-Item -LiteralPath "package.json" -Destination $packageRoot -Force
           Get-ChildItem -LiteralPath "dist" -Filter "*.dll" -File | Copy-Item -Destination (Join-Path $packageRoot "dist") -Force
-          Compress-Archive -Path $packageRoot -DestinationPath $zipName -Force
+          Get-ChildItem -LiteralPath "icons" -Filter "*.png" -File | Copy-Item -Destination (Join-Path $packageRoot "icons") -Force
+          Compress-Archive -Path $packageRoot -DestinationPath $env:PACKAGE_ZIP -Force
 
-      - name: Commit dist DLLs
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      - name: Commit package outputs
+        if: github.actor != 'github-actions[bot]' && github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
         shell: pwsh
         working-directory: PlugHub_Packages
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add dist/*.dll
+          git add package.json dist/*.dll icons/*.png
 
           if ((git status --porcelain) -ne "") {
-            git commit -m "chore: update package binaries"
+            git commit -m "chore: update package build $env:PACKAGE_VERSION_TAG"
             git push
           }
 
@@ -162,7 +248,7 @@ jobs:
   mirror-gitee:
     name: Mirror final main to Gitee
     needs: build
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.actor != 'github-actions[bot]'
+    if: github.actor != 'github-actions[bot]' && github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
 
     steps:
@@ -213,6 +299,7 @@ jobs:
           git remote add gitee git@gitee.com:GaoMengGu/PlugHub_Packages.git
           git push --force gitee HEAD:refs/heads/main
 
-          if git rev-parse -q --verify refs/tags/V1.0.0 >/dev/null; then
-            git push --force gitee refs/tags/V1.0.0:refs/tags/V1.0.0
+          version_tag="${{ needs.build.outputs.version_tag }}"
+          if [ -n "$version_tag" ] && git rev-parse -q --verify "refs/tags/$version_tag" >/dev/null; then
+            git push --force gitee "refs/tags/$version_tag:refs/tags/$version_tag"
           fi

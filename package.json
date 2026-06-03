@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0",
-  "version": "V1.0.0",
+  "version": "V1.0.1",
   "revitVersions": ["2020"],
   "frameworkVersionRange": ">=1.3.0",
   "modules": [
@@ -24,7 +24,7 @@
           "order": 210,
           "defaultState": "Visible",
           "buttonSize": "large",
-          "iconPath": "",
+          "iconPath": "icons/grid-visibility.png",
           "commandAssembly": "dist/PlugHub.GridVisibility.dll",
           "commandType": "PlugHub.GridVisibility.ToggleGridVisibilityCommand"
         }
@@ -50,7 +50,7 @@
           "order": 220,
           "defaultState": "Visible",
           "buttonSize": "large",
-          "iconPath": "",
+          "iconPath": "icons/level-visibility.png",
           "commandAssembly": "dist/PlugHub.LevelVisibility.dll",
           "commandType": "PlugHub.LevelVisibility.ToggleLevelVisibilityCommand"
         }
@@ -69,14 +69,14 @@
         {
           "id": "plughub.modules.duct-preferred-junction.switch",
           "displayName": "风管接头切换",
-          "description": "在已选或点选风管的类型上切换 Tee/Tap 首选连接类型。",
+          "description": "在已选或点选风管的类型上切换首选连接类型。",
           "category": "mep",
           "group": "机电风管",
           "tags": ["mep", "duct", "frequent"],
           "order": 310,
           "defaultState": "Visible",
           "buttonSize": "large",
-          "iconPath": "",
+          "iconPath": "icons/duct-preferred-junction.png",
           "commandAssembly": "dist/PlugHub.DuctPreferredJunction.dll",
           "commandType": "PlugHub.DuctPreferredJunction.DuctPreferredJunctionSwitcherCommand"
         }
@@ -102,7 +102,7 @@
           "order": 410,
           "defaultState": "Visible",
           "buttonSize": "large",
-          "iconPath": "",
+          "iconPath": "icons/family-material-parameters.png",
           "commandAssembly": "dist/PlugHub.FamilyMaterialParameters.dll",
           "commandType": "PlugHub.FamilyMaterialParameters.BatchAddMaterialParameterCommand"
         }

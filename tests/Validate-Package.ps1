@@ -81,14 +81,52 @@ function Reject-JsonProperty {
     }
 }
 
+function Require-FeatureIcon {
+    param(
+        [object]$Feature,
+        [string]$ExpectedPath
+    )
+
+    $iconPath = [string]$Feature.iconPath
+    if ([string]::IsNullOrWhiteSpace($iconPath)) {
+        Add-Failure "Feature $($Feature.id) must define iconPath"
+        return
+    }
+
+    if ($iconPath.StartsWith("builtin:", [StringComparison]::OrdinalIgnoreCase)) {
+        Add-Failure "Feature $($Feature.id) must use a packaged icon file, not a built-in icon"
+        return
+    }
+
+    if ([IO.Path]::IsPathRooted($iconPath)) {
+        Add-Failure "Feature $($Feature.id) iconPath must be package-relative"
+        return
+    }
+
+    if ($iconPath -ne $ExpectedPath) {
+        Add-Failure "Feature $($Feature.id) iconPath must be $ExpectedPath"
+        return
+    }
+
+    if ([IO.Path]::GetExtension($iconPath) -ne ".png") {
+        Add-Failure "Feature $($Feature.id) iconPath must point to a PNG file"
+        return
+    }
+
+    $resolvedPath = Join-Path $Root $iconPath
+    if (!(Test-Path -LiteralPath $resolvedPath)) {
+        Add-Failure "Feature $($Feature.id) icon file is missing: $iconPath"
+    }
+}
+
 $manifestPath = Join-Path $Root "package.json"
 if (!(Test-Path -LiteralPath $manifestPath)) {
     Add-Failure "Missing package.json"
 }
 else {
     $manifest = Get-Content -Raw -Encoding UTF8 -LiteralPath $manifestPath | ConvertFrom-Json
-    if ($manifest.version -ne "V1.0.0") {
-        Add-Failure "package.json version must be V1.0.0"
+    if ($manifest.version -notmatch '^V\d+\.\d+\.\d+$') {
+        Add-Failure "package.json version must match V<major>.<minor>.<patch>"
     }
     if (@($manifest.revitVersions) -notcontains "2020") {
         Add-Failure "package.json revitVersions must include 2020"
@@ -136,6 +174,7 @@ else {
             if ($feature.commandType -ne "PlugHub.GridVisibility.ToggleGridVisibilityCommand") {
                 Add-Failure "Grid visibility feature commandType must be PlugHub.GridVisibility.ToggleGridVisibilityCommand"
             }
+            Require-FeatureIcon $feature "icons/grid-visibility.png"
         }
     }
 
@@ -162,6 +201,35 @@ else {
             if ($feature.commandType -ne "PlugHub.LevelVisibility.ToggleLevelVisibilityCommand") {
                 Add-Failure "Level visibility feature commandType must be PlugHub.LevelVisibility.ToggleLevelVisibilityCommand"
             }
+            Require-FeatureIcon $feature "icons/level-visibility.png"
+        }
+    }
+
+    $ductModule = $manifest.modules | Where-Object { $_.id -eq "plughub.modules.duct-preferred-junction" } | Select-Object -First 1
+    if ($null -eq $ductModule) {
+        Add-Failure "Missing duct preferred junction module in package.json"
+    }
+    else {
+        $feature = $ductModule.features | Where-Object { $_.id -eq "plughub.modules.duct-preferred-junction.switch" } | Select-Object -First 1
+        if ($null -eq $feature) {
+            Add-Failure "Missing duct preferred junction switch feature in package.json"
+        }
+        else {
+            Require-FeatureIcon $feature "icons/duct-preferred-junction.png"
+        }
+    }
+
+    $familyModule = $manifest.modules | Where-Object { $_.id -eq "plughub.modules.family-material-parameters" } | Select-Object -First 1
+    if ($null -eq $familyModule) {
+        Add-Failure "Missing family material parameters module in package.json"
+    }
+    else {
+        $feature = $familyModule.features | Where-Object { $_.id -eq "plughub.modules.family-material-parameters.batch-add-material" } | Select-Object -First 1
+        if ($null -eq $feature) {
+            Add-Failure "Missing family material parameters feature in package.json"
+        }
+        else {
+            Require-FeatureIcon $feature "icons/family-material-parameters.png"
         }
     }
 }
@@ -185,6 +253,8 @@ Require-Text "src\PlugHub.LevelVisibility\ToggleLevelVisibilityCommand.cs" "SetC
 Reject-Text "src\PlugHub.LevelVisibility\ToggleLevelVisibilityCommand.cs" "TaskDialog.Show" "Level visibility success popup"
 Require-Text "build.ps1" "src\PlugHub.LevelVisibility\PlugHub.LevelVisibility.csproj" "Level visibility project build registration"
 Require-Text "PlugHub_Packages.slnx" "src/PlugHub.LevelVisibility/PlugHub.LevelVisibility.csproj" "Level visibility solution registration"
+Reject-Text "package.json" "builtin:" "Built-in icon reference"
+Reject-Text "package.json" "Tee/Tap" "Duct preferred junction old Tee/Tap wording"
 
 if ($failures.Count -gt 0) {
     $failures | ForEach-Object { Write-Host "ERROR: $_" }
