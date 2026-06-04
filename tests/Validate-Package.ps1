@@ -302,6 +302,8 @@ Require-Text "build.ps1" "src\PlugHub.ReferencePlaneVisibility\PlugHub.Reference
 Require-Text "PlugHub_Packages.slnx" "src/PlugHub.ReferencePlaneVisibility/PlugHub.ReferencePlaneVisibility.csproj" "Reference plane visibility solution registration"
 Reject-Text "package.json" "builtin:" "Built-in icon reference"
 Reject-Text "package.json" "Tee/Tap" "Duct preferred junction old Tee/Tap wording"
+Require-Text ".github\workflows\build-package.yml" '$versionPattern = [regex]::new(' "Root version replacement regex instance"
+Require-Text ".github\workflows\build-package.yml" '$manifestText = $versionPattern.Replace($manifestText, (' "Root version replacement count-limited call"
 
 if ($failures.Count -gt 0) {
     $failures | ForEach-Object { Write-Host "ERROR: $_" }
