@@ -89,8 +89,8 @@ jobs:
           if ([string]::IsNullOrWhiteSpace($versionTag)) {
             git fetch origin --tags --force
 
-            $manifest = Get-Content -Raw -Encoding UTF8 -LiteralPath "package.json" | ConvertFrom-Json
-            $manifestVersion = Normalize-VersionTag $manifest.version
+            $manifest = Get-Content -Raw -Encoding UTF8 -LiteralPath "packages.json" | ConvertFrom-Json
+            $manifestVersion = Normalize-VersionTag $manifest.indexVersion
             $tagVersions = New-Object System.Collections.Generic.List[string]
 
             git tag --list "V*" | ForEach-Object {
@@ -118,14 +118,14 @@ jobs:
           }
 
           $version = $versionTag.Substring(1)
-          $manifestText = Get-Content -Raw -Encoding UTF8 -LiteralPath "package.json"
-          if ($manifestText -notmatch '"version"\s*:\s*"[^"]+"') {
-            throw "package.json must contain a root version field."
+          $manifestText = Get-Content -Raw -Encoding UTF8 -LiteralPath "packages.json"
+          if ($manifestText -notmatch '"indexVersion"\s*:\s*"[^"]+"') {
+            throw "packages.json must contain a root indexVersion field."
           }
 
-          $versionPattern = [regex]::new('"version"\s*:\s*"[^"]+"')
-          $manifestText = $versionPattern.Replace($manifestText, ('"version": "{0}"' -f $versionTag), 1)
-          Set-Content -LiteralPath "package.json" -Value $manifestText -Encoding UTF8 -NoNewline
+          $indexVersionPattern = [regex]::new('"indexVersion"\s*:\s*"[^"]+"')
+          $manifestText = $indexVersionPattern.Replace($manifestText, ('"indexVersion": "{0}"' -f $versionTag), 1)
+          Set-Content -LiteralPath "packages.json" -Value $manifestText -Encoding UTF8 -NoNewline
 
           "PACKAGE_VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           "PACKAGE_VERSION_TAG=$versionTag" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
@@ -136,18 +136,12 @@ jobs:
         shell: pwsh
         working-directory: PlugHub_Packages
         run: |
-          $manifest = Get-Content -Raw package.json | ConvertFrom-Json
+          $manifest = Get-Content -Raw packages.json | ConvertFrom-Json
           $missing = New-Object System.Collections.Generic.List[string]
 
           foreach ($module in $manifest.modules) {
             if (![string]::IsNullOrWhiteSpace($module.assembly) -and !(Test-Path -LiteralPath $module.assembly)) {
               $missing.Add($module.assembly)
-            }
-
-            foreach ($feature in $module.features) {
-              if (![string]::IsNullOrWhiteSpace($feature.commandAssembly) -and !(Test-Path -LiteralPath $feature.commandAssembly)) {
-                $missing.Add($feature.commandAssembly)
-              }
             }
           }
 
@@ -167,7 +161,7 @@ jobs:
           name: plughub-package
           if-no-files-found: error
           path: |
-            PlugHub_Packages/package.json
+            PlugHub_Packages/packages.json
             PlugHub_Packages/dist/*.dll
             PlugHub_Packages/icons/*.png
 
@@ -183,7 +177,7 @@ jobs:
 
           New-Item -ItemType Directory -Force -Path (Join-Path $packageRoot "dist") | Out-Null
           New-Item -ItemType Directory -Force -Path (Join-Path $packageRoot "icons") | Out-Null
-          Copy-Item -LiteralPath "package.json" -Destination $packageRoot -Force
+          Copy-Item -LiteralPath "packages.json" -Destination $packageRoot -Force
           Get-ChildItem -LiteralPath "dist" -Filter "*.dll" -File | Copy-Item -Destination (Join-Path $packageRoot "dist") -Force
           Get-ChildItem -LiteralPath "icons" -Filter "*.png" -File | Copy-Item -Destination (Join-Path $packageRoot "icons") -Force
           Compress-Archive -Path $packageRoot -DestinationPath $env:PACKAGE_ZIP -Force
@@ -195,7 +189,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add package.json dist/*.dll icons/*.png
+          git add packages.json dist/*.dll icons/*.png
 
           if ((git status --porcelain) -ne "") {
             git commit -m "chore: update package build $env:PACKAGE_VERSION_TAG"

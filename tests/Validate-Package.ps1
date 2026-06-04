@@ -125,24 +125,24 @@ function Require-FeatureIcon {
     }
 }
 
-$manifestPath = Join-Path $Root "package.json"
+$manifestPath = Join-Path $Root "packages.json"
 if (!(Test-Path -LiteralPath $manifestPath)) {
-    Add-Failure "Missing package.json"
+    Add-Failure "Missing packages.json"
 }
 else {
     $manifest = Get-Content -Raw -Encoding UTF8 -LiteralPath $manifestPath | ConvertFrom-Json
-    if (!(Test-VersionTag $manifest.version)) {
-        Add-Failure "package.json version must match V<major>.<minor>.<patch>"
+    if (!(Test-VersionTag $manifest.indexVersion)) {
+        Add-Failure "packages.json indexVersion must match V<major>.<minor>.<patch>"
     }
     if (@($manifest.revitVersions) -notcontains "2020") {
-        Add-Failure "package.json revitVersions must include 2020"
+        Add-Failure "packages.json revitVersions must include 2020"
     }
     if ($manifest.frameworkVersionRange -ne ">=1.3.0") {
-        Add-Failure "package.json frameworkVersionRange must be >=1.3.0"
+        Add-Failure "packages.json frameworkVersionRange must be >=1.3.0"
     }
 
-    foreach ($property in @("packageDirectories", "moduleSources", "repositories", "conflictPolicy")) {
-        Reject-JsonProperty $manifest $property "package.json root"
+    foreach ($property in @("version", "packageDirectories", "moduleSources", "repositories", "conflictPolicy")) {
+        Reject-JsonProperty $manifest $property "packages.json root"
     }
 
     foreach ($module in @($manifest.modules)) {
@@ -150,12 +150,20 @@ else {
             Add-Failure "Module $($module.id) version must match V<major>.<minor>.<patch>"
         }
 
-        foreach ($property in @("type", "name", "sourceId", "resolvedBaseDirectory", "dependsOn")) {
+        if ($module.author -ne "GAOMENGGU") {
+            Add-Failure "Module $($module.id) author must be GAOMENGGU"
+        }
+
+        if ([string]::IsNullOrWhiteSpace([string]$module.category)) {
+            Add-Failure "Module $($module.id) must define category"
+        }
+
+        foreach ($property in @("type", "name", "sourceId", "resolvedBaseDirectory", "dependsOn", "enabled", "visible", "order")) {
             Reject-JsonProperty $module $property "Module $($module.id)"
         }
 
         foreach ($feature in @($module.features)) {
-            foreach ($property in @("name", "commandKey", "version")) {
+            foreach ($property in @("name", "commandKey", "version", "category", "group", "tags", "order", "defaultState", "buttonSize", "commandAssembly")) {
                 Reject-JsonProperty $feature $property "Feature $($feature.id)"
             }
         }
@@ -163,7 +171,7 @@ else {
 
     $gridModule = $manifest.modules | Where-Object { $_.id -eq "plughub.modules.grid-visibility" } | Select-Object -First 1
     if ($null -eq $gridModule) {
-        Add-Failure "Missing grid visibility module in package.json"
+        Add-Failure "Missing grid visibility module in packages.json"
     }
     else {
         if ($gridModule.assembly -ne "dist/PlugHub.GridVisibility.dll") {
@@ -172,14 +180,11 @@ else {
 
         $feature = $gridModule.features | Where-Object { $_.id -eq "plughub.modules.grid-visibility.toggle" } | Select-Object -First 1
         if ($null -eq $feature) {
-            Add-Failure "Missing grid visibility toggle feature in package.json"
+            Add-Failure "Missing grid visibility toggle feature in packages.json"
         }
         else {
             if ($feature.displayName -ne (ConvertFrom-Json '"\u8f74\u7f51\u663e\u9690\u5207\u6362"')) {
                 Add-Failure "Grid visibility feature displayName must match the manifest display name"
-            }
-            if ($feature.commandAssembly -ne "dist/PlugHub.GridVisibility.dll") {
-                Add-Failure "Grid visibility feature commandAssembly must be dist/PlugHub.GridVisibility.dll"
             }
             if ($feature.commandType -ne "PlugHub.GridVisibility.ToggleGridVisibilityCommand") {
                 Add-Failure "Grid visibility feature commandType must be PlugHub.GridVisibility.ToggleGridVisibilityCommand"
@@ -190,7 +195,7 @@ else {
 
     $levelModule = $manifest.modules | Where-Object { $_.id -eq "plughub.modules.level-visibility" } | Select-Object -First 1
     if ($null -eq $levelModule) {
-        Add-Failure "Missing level visibility module in package.json"
+        Add-Failure "Missing level visibility module in packages.json"
     }
     else {
         if ($levelModule.assembly -ne "dist/PlugHub.LevelVisibility.dll") {
@@ -199,14 +204,11 @@ else {
 
         $feature = $levelModule.features | Where-Object { $_.id -eq "plughub.modules.level-visibility.toggle" } | Select-Object -First 1
         if ($null -eq $feature) {
-            Add-Failure "Missing level visibility toggle feature in package.json"
+            Add-Failure "Missing level visibility toggle feature in packages.json"
         }
         else {
             if ($feature.displayName -ne (ConvertFrom-Json '"\u6807\u9ad8\u663e\u9690\u5207\u6362"')) {
                 Add-Failure "Level visibility feature displayName must match the manifest display name"
-            }
-            if ($feature.commandAssembly -ne "dist/PlugHub.LevelVisibility.dll") {
-                Add-Failure "Level visibility feature commandAssembly must be dist/PlugHub.LevelVisibility.dll"
             }
             if ($feature.commandType -ne "PlugHub.LevelVisibility.ToggleLevelVisibilityCommand") {
                 Add-Failure "Level visibility feature commandType must be PlugHub.LevelVisibility.ToggleLevelVisibilityCommand"
@@ -217,7 +219,7 @@ else {
 
     $referencePlaneModule = $manifest.modules | Where-Object { $_.id -eq "plughub.modules.reference-plane-visibility" } | Select-Object -First 1
     if ($null -eq $referencePlaneModule) {
-        Add-Failure "Missing reference plane visibility module in package.json"
+        Add-Failure "Missing reference plane visibility module in packages.json"
     }
     else {
         if ($referencePlaneModule.assembly -ne "dist/PlugHub.ReferencePlaneVisibility.dll") {
@@ -226,14 +228,11 @@ else {
 
         $feature = $referencePlaneModule.features | Where-Object { $_.id -eq "plughub.modules.reference-plane-visibility.toggle" } | Select-Object -First 1
         if ($null -eq $feature) {
-            Add-Failure "Missing reference plane visibility toggle feature in package.json"
+            Add-Failure "Missing reference plane visibility toggle feature in packages.json"
         }
         else {
             if ($feature.displayName -ne (ConvertFrom-Json '"\u53c2\u7167\u5e73\u9762\u663e\u9690\u5207\u6362"')) {
                 Add-Failure "Reference plane visibility feature displayName must match the manifest display name"
-            }
-            if ($feature.commandAssembly -ne "dist/PlugHub.ReferencePlaneVisibility.dll") {
-                Add-Failure "Reference plane visibility feature commandAssembly must be dist/PlugHub.ReferencePlaneVisibility.dll"
             }
             if ($feature.commandType -ne "PlugHub.ReferencePlaneVisibility.ToggleReferencePlaneVisibilityCommand") {
                 Add-Failure "Reference plane visibility feature commandType must be PlugHub.ReferencePlaneVisibility.ToggleReferencePlaneVisibilityCommand"
@@ -244,12 +243,12 @@ else {
 
     $ductModule = $manifest.modules | Where-Object { $_.id -eq "plughub.modules.duct-preferred-junction" } | Select-Object -First 1
     if ($null -eq $ductModule) {
-        Add-Failure "Missing duct preferred junction module in package.json"
+        Add-Failure "Missing duct preferred junction module in packages.json"
     }
     else {
         $feature = $ductModule.features | Where-Object { $_.id -eq "plughub.modules.duct-preferred-junction.switch" } | Select-Object -First 1
         if ($null -eq $feature) {
-            Add-Failure "Missing duct preferred junction switch feature in package.json"
+            Add-Failure "Missing duct preferred junction switch feature in packages.json"
         }
         else {
             Require-FeatureIcon $feature "icons/duct-preferred-junction.png"
@@ -258,12 +257,12 @@ else {
 
     $familyModule = $manifest.modules | Where-Object { $_.id -eq "plughub.modules.family-material-parameters" } | Select-Object -First 1
     if ($null -eq $familyModule) {
-        Add-Failure "Missing family material parameters module in package.json"
+        Add-Failure "Missing family material parameters module in packages.json"
     }
     else {
         $feature = $familyModule.features | Where-Object { $_.id -eq "plughub.modules.family-material-parameters.batch-add-material" } | Select-Object -First 1
         if ($null -eq $feature) {
-            Add-Failure "Missing family material parameters feature in package.json"
+            Add-Failure "Missing family material parameters feature in packages.json"
         }
         else {
             Require-FeatureIcon $feature "icons/family-material-parameters.png"
@@ -300,10 +299,10 @@ Require-Text "src\PlugHub.ReferencePlaneVisibility\ToggleReferencePlaneVisibilit
 Reject-Text "src\PlugHub.ReferencePlaneVisibility\ToggleReferencePlaneVisibilityCommand.cs" "TaskDialog.Show" "Reference plane visibility success popup"
 Require-Text "build.ps1" "src\PlugHub.ReferencePlaneVisibility\PlugHub.ReferencePlaneVisibility.csproj" "Reference plane visibility project build registration"
 Require-Text "PlugHub_Packages.slnx" "src/PlugHub.ReferencePlaneVisibility/PlugHub.ReferencePlaneVisibility.csproj" "Reference plane visibility solution registration"
-Reject-Text "package.json" "builtin:" "Built-in icon reference"
-Reject-Text "package.json" "Tee/Tap" "Duct preferred junction old Tee/Tap wording"
-Require-Text ".github\workflows\build-package.yml" '$versionPattern = [regex]::new(' "Root version replacement regex instance"
-Require-Text ".github\workflows\build-package.yml" '$manifestText = $versionPattern.Replace($manifestText, (' "Root version replacement count-limited call"
+Reject-Text "packages.json" "builtin:" "Built-in icon reference"
+Reject-Text "packages.json" "Tee/Tap" "Duct preferred junction old Tee/Tap wording"
+Require-Text ".github\workflows\build-package.yml" '$indexVersionPattern = [regex]::new(' "Root indexVersion replacement regex instance"
+Require-Text ".github\workflows\build-package.yml" '$manifestText = $indexVersionPattern.Replace($manifestText, (' "Root indexVersion replacement count-limited call"
 
 if ($failures.Count -gt 0) {
     $failures | ForEach-Object { Write-Host "ERROR: $_" }
