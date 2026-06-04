@@ -81,6 +81,12 @@ function Reject-JsonProperty {
     }
 }
 
+function Test-VersionTag {
+    param([string]$Value)
+
+    return ![string]::IsNullOrWhiteSpace($Value) -and $Value -match '^V\d+\.\d+\.\d+$'
+}
+
 function Require-FeatureIcon {
     param(
         [object]$Feature,
@@ -125,7 +131,7 @@ if (!(Test-Path -LiteralPath $manifestPath)) {
 }
 else {
     $manifest = Get-Content -Raw -Encoding UTF8 -LiteralPath $manifestPath | ConvertFrom-Json
-    if ($manifest.version -notmatch '^V\d+\.\d+\.\d+$') {
+    if (!(Test-VersionTag $manifest.version)) {
         Add-Failure "package.json version must match V<major>.<minor>.<patch>"
     }
     if (@($manifest.revitVersions) -notcontains "2020") {
@@ -140,12 +146,16 @@ else {
     }
 
     foreach ($module in @($manifest.modules)) {
+        if (!(Test-VersionTag $module.version)) {
+            Add-Failure "Module $($module.id) version must match V<major>.<minor>.<patch>"
+        }
+
         foreach ($property in @("type", "name", "sourceId", "resolvedBaseDirectory", "dependsOn")) {
             Reject-JsonProperty $module $property "Module $($module.id)"
         }
 
         foreach ($feature in @($module.features)) {
-            foreach ($property in @("name", "commandKey")) {
+            foreach ($property in @("name", "commandKey", "version")) {
                 Reject-JsonProperty $feature $property "Feature $($feature.id)"
             }
         }

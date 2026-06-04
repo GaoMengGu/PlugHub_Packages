@@ -30,6 +30,7 @@ PlugHub_Packages/
 - 一个命令文件只承载一个用户可触发功能的 Revit API 操作。
 - 模块描述文件只实现 `IPlugHubModule.Describe()` 元数据，不写业务逻辑。
 - `package.json` 是 PlugHub 读取外部插件包的推荐入口，声明模块、功能和命令类型；平铺投放单个 DLL 时也可以使用 `<DllName>.package.json`。
+- 根 `version` 表示整体 Release ZIP 版本；`modules[].version` 表示单个模块在 PlugHub 框架中展示和比较的版本。
 
 ## 构建
 
@@ -115,16 +116,19 @@ packages/dropins/
 2. 引用 PlugHub 主框架的 `PlugHub.Contracts.csproj`。
 3. 创建一个模块描述类，实现 `IPlugHubModule`。
 4. 创建一个命令类，实现 Revit 的 `IExternalCommand`。
-5. 在 `package.json` 中新增模块记录和功能记录。
+5. 在 `package.json` 中新增模块记录和功能记录，并为模块设置 `version`。
 6. 运行 `build.ps1`，确认 DLL 输出到 `dist`。
 7. 启动或重启 Revit，让 PlugHub 重新扫描插件包。
 
 ## 清单字段约定
 
+- 根 `version` 必须使用 `V<major>.<minor>.<patch>`，由发布 workflow 在普通发布时自动递增。
 - `module.id` 和 `feature.id` 必须全局唯一。
+- `module.version` 必须使用 `V<major>.<minor>.<patch>`。只在该模块实际变更时递增；新增模块从当前清单基线或 `V1.0.0` 开始。
 - `feature.group` 会成为默认 Ribbon panel 名称；PlugHub workspace 未配置 group 时，会使用该字段生成 fallback panel。
 - `feature.commandAssembly` 指向命令 DLL。相对路径按插件包清单所在目录解析。
 - `feature.commandType` 必须是完整类型名，并实现 `Autodesk.Revit.UI.IExternalCommand`。
+- `feature.version` 当前不使用，功能更新状态以所属 module 的 `version` 为准。
 - `buttonSize` 支持 `large` 和 `small`。
 - `iconPath` 为空时使用 PlugHub 默认图标；相对路径按插件包清单所在目录解析。
 

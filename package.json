@@ -7,6 +7,7 @@
     {
       "id": "plughub.modules.grid-visibility",
       "assembly": "dist/PlugHub.GridVisibility.dll",
+      "version": "V1.0.2",
       "displayName": "视图工具",
       "description": "当前视图轴网显示控制工具。",
       "enabled": true,
@@ -33,6 +34,7 @@
     {
       "id": "plughub.modules.level-visibility",
       "assembly": "dist/PlugHub.LevelVisibility.dll",
+      "version": "V1.0.2",
       "displayName": "视图工具",
       "description": "当前视图标高显示控制工具。",
       "enabled": true,
@@ -59,6 +61,7 @@
     {
       "id": "plughub.modules.reference-plane-visibility",
       "assembly": "dist/PlugHub.ReferencePlaneVisibility.dll",
+      "version": "V1.0.2",
       "displayName": "视图工具",
       "description": "当前视图参照平面显示控制工具。",
       "enabled": true,
@@ -85,6 +88,7 @@
     {
       "id": "plughub.modules.duct-preferred-junction",
       "assembly": "dist/PlugHub.DuctPreferredJunction.dll",
+      "version": "V1.0.2",
       "displayName": "机电风管",
       "description": "风管连接偏好工具。",
       "enabled": true,
@@ -111,6 +115,7 @@
     {
       "id": "plughub.modules.family-material-parameters",
       "assembly": "dist/PlugHub.FamilyMaterialParameters.dll",
+      "version": "V1.0.2",
       "displayName": "族批处理",
       "description": "族文件材质参数批处理工具。",
       "enabled": true,
