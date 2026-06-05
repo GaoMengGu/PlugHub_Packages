@@ -52,24 +52,23 @@ packages/dropins/PlugHub_Packages/
 
 6. 重启 Revit，或在 PlugHub 中重新加载插件来源。
 
-### 方式二：配置 GitHub 来源
+### 方式二：配置仓库来源
 
-如果希望 PlugHub 自动从 GitHub 拉取本仓库，在 PlugHub 的 `config/sources.json` 中启用或新增：
+PlugHub 默认公开仓库源使用 Gitee，普通用户优先配置：
 
 ```json
 {
-  "id": "plughub-packages",
-  "type": "github",
-  "repository": "GaoMengGu/PlugHub_Packages",
+  "id": "plughub-public-packages",
+  "provider": "gitee",
+  "visibility": "public",
+  "repository": "https://gitee.com/GaoMengGu/PlugHub_Packages",
   "ref": "main",
-  "path": "packages/github/GaoMengGu_PlugHub_Packages",
   "manifestPath": "packages.json",
-  "enabled": true,
-  "autoUpdate": true
+  "enabled": true
 }
 ```
 
-PlugHub 会缓存仓库归档，并读取仓库中的 `packages.json` 和 `dist/*.dll`。因此本仓库保留 `dist` DLL，`bin/obj` 和 PDB 文件不进入版本库。
+如果团队环境优先访问 GitHub，也可以把 `provider` 改为 `github`，并把 `repository` 写成 `GaoMengGu/PlugHub_Packages`。PlugHub 会通过 HTTP archive 缓存仓库归档，并读取仓库中的 `packages.json` 和 `dist/*.dll`。因此本仓库保留 `dist` DLL，`bin/obj` 和 PDB 文件不进入版本库。
 
 ## 开发说明
 

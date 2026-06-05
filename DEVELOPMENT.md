@@ -66,27 +66,27 @@ GitHub Actions 会在 `main` 分支构建后提交 `dist/*.dll`。`bin/obj` 和 
   "type": "localFolder",
   "path": "D:/AI/code/PlugHub_Packages",
   "manifestPath": "packages.json",
-  "enabled": true,
-  "autoUpdate": false
+  "enabled": true
 }
 ```
 
-方式二：配置 GitHub 来源。
+方式二：配置公开仓库来源。
 
 在 PlugHub 的 `config\sources.json` 中启用或新增：
 
 ```json
 {
-  "id": "plughub-packages",
-  "type": "github",
-  "repository": "GaoMengGu/PlugHub_Packages",
+  "id": "plughub-public-packages",
+  "provider": "gitee",
+  "visibility": "public",
+  "repository": "https://gitee.com/GaoMengGu/PlugHub_Packages",
   "ref": "main",
-  "path": "packages/github/GaoMengGu_PlugHub_Packages",
   "manifestPath": "packages.json",
-  "enabled": true,
-  "autoUpdate": true
+  "enabled": true
 }
 ```
+
+如果需要使用 GitHub 镜像，把 `provider` 改为 `github`，并把 `repository` 写成 `GaoMengGu/PlugHub_Packages`。
 
 方式三：复制到投放目录。
 

@@ -218,7 +218,7 @@ jobs:
           2. 将解压得到的 PlugHub_Packages 文件夹放入 PlugHub 的 packages/dropins 目录。
           3. 重启 Revit 或重新加载 PlugHub。
 
-          也可以在 PlugHub 的 config\sources.json 中配置 GitHub 来源 GaoMengGu/PlugHub_Packages。
+          也可以在 PlugHub 的 config\sources.json 中配置 Gitee 来源 https://gitee.com/GaoMengGu/PlugHub_Packages，或配置 GitHub 来源 GaoMengGu/PlugHub_Packages。
           "@ | Set-Content -LiteralPath $notesPath -Encoding UTF8
 
           if ("${{ github.ref_type }}" -ne "tag") {
