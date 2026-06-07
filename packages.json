@@ -123,6 +123,30 @@
           "commandType": "PlugHub.FamilyMaterialParameters.BatchAddMaterialParameterCommand"
         }
       ]
+    },
+    {
+      "id": "plughub.modules.family-file-saver",
+      "version": "V1.0.1",
+      "author": "GAOMENGGU",
+      "displayName": "族文件保存",
+      "description": "读取当前项目所有族，筛选后批量保存到指定文件夹。",
+      "assembly": "dist/PlugHub.FamilyFileSaver.dll",
+      "category": "family",
+      "tags": [
+        "family",
+        "save",
+        "export",
+        "revit-api"
+      ],
+      "features": [
+        {
+          "id": "plughub.modules.family-file-saver.save",
+          "displayName": "保存族文件",
+          "description": "读取当前项目所有族，排除系统族，弹出选择窗口批量保存到指定文件夹。",
+          "iconPath": "icons/family-file-saver.png",
+          "commandType": "PlugHub.FamilyFileSaver.SaveFamilyFilesCommand"
+        }
+      ]
     }
   ]
 }

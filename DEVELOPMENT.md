@@ -16,6 +16,10 @@ PlugHub_Packages/
     PlugHub.FamilyMaterialParameters/
       FamilyMaterialParametersModule.cs
       BatchAddMaterialParameterCommand.cs
+    PlugHub.FamilyFileSaver/
+      FamilyFileSaverModule.cs
+      SaveFamilyFilesCommand.cs
+      FamilySelectionWindow.xaml
     PlugHub.GridVisibility/
       GridVisibilityModule.cs
       ToggleGridVisibilityCommand.cs

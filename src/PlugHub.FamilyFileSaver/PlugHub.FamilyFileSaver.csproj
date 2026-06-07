@@ -1,0 +1,45 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <OutputType>Library</OutputType>
+    <AssemblyName>PlugHub.FamilyFileSaver</AssemblyName>
+    <RootNamespace>PlugHub.FamilyFileSaver</RootNamespace>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <LangVersion>8.0</LangVersion>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(RevitApiReferenceMode)' == 'Installed'">
+    <Reference Include="RevitAPI">
+      <HintPath>$(RevitApiDir)\RevitAPI.dll</HintPath>
+      <Private>false</Private>
+      <EmbedInteropTypes>false</EmbedInteropTypes>
+    </Reference>
+    <Reference Include="RevitAPIUI">
+      <HintPath>$(RevitApiDir)\RevitAPIUI.dll</HintPath>
+      <Private>false</Private>
+      <EmbedInteropTypes>false</EmbedInteropTypes>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(RevitApiReferenceMode)' == 'NuGet'">
+    <PackageReference Include="Autodesk.Revit.SDK" Version="$(RevitApiNuGetVersion)" PrivateAssets="all" ExcludeAssets="runtime" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\revittool\src\PlugHub.Contracts\PlugHub.Contracts.csproj" />
+  </ItemGroup>
+
+  <Target Name="EnsureRevitApiReferenceMode" BeforeTargets="ResolveReferences">
+    <Error Condition="'$(RevitApiReferenceMode)' != 'Installed' and '$(RevitApiReferenceMode)' != 'NuGet'" Text="Unsupported RevitApiReferenceMode" />
+    <Error Condition="'$(RevitApiReferenceMode)' == 'NuGet' and '$(RevitApiNuGetVersion)' == ''" Text="RevitApiNuGetVersion is required when RevitApiReferenceMode=NuGet." />
+  </Target>
+
+  <Target Name="EnsureInstalledRevitApiReferences" BeforeTargets="ResolveReferences" Condition="'$(RevitApiReferenceMode)' == 'Installed'">
+    <Error Condition="!Exists('$(RevitApiDir)\RevitAPI.dll')" Text="RevitAPI.dll not found." />
+    <Error Condition="!Exists('$(RevitApiDir)\RevitAPIUI.dll')" Text="RevitAPIUI.dll not found." />
+  </Target>
+</Project>

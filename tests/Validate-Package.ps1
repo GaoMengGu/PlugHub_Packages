@@ -268,6 +268,27 @@ else {
             Require-FeatureIcon $feature "icons/family-material-parameters.png"
         }
     }
+
+    $familyFileSaverModule = $manifest.modules | Where-Object { $_.id -eq "plughub.modules.family-file-saver" } | Select-Object -First 1
+    if ($null -eq $familyFileSaverModule) {
+        Add-Failure "Missing family file saver module in packages.json"
+    }
+    else {
+        if ($familyFileSaverModule.assembly -ne "dist/PlugHub.FamilyFileSaver.dll") {
+            Add-Failure "Family file saver module assembly must be dist/PlugHub.FamilyFileSaver.dll"
+        }
+
+        $feature = $familyFileSaverModule.features | Where-Object { $_.id -eq "plughub.modules.family-file-saver.save" } | Select-Object -First 1
+        if ($null -eq $feature) {
+            Add-Failure "Missing family file saver feature in packages.json"
+        }
+        else {
+            if ($feature.commandType -ne "PlugHub.FamilyFileSaver.SaveFamilyFilesCommand") {
+                Add-Failure "Family file saver commandType must be PlugHub.FamilyFileSaver.SaveFamilyFilesCommand"
+            }
+            Require-FeatureIcon $feature "icons/family-file-saver.png"
+        }
+    }
 }
 
 Require-File "src\PlugHub.GridVisibility\PlugHub.GridVisibility.csproj"
@@ -299,6 +320,18 @@ Require-Text "src\PlugHub.ReferencePlaneVisibility\ToggleReferencePlaneVisibilit
 Reject-Text "src\PlugHub.ReferencePlaneVisibility\ToggleReferencePlaneVisibilityCommand.cs" "TaskDialog.Show" "Reference plane visibility success popup"
 Require-Text "build.ps1" "src\PlugHub.ReferencePlaneVisibility\PlugHub.ReferencePlaneVisibility.csproj" "Reference plane visibility project build registration"
 Require-Text "PlugHub_Packages.slnx" "src/PlugHub.ReferencePlaneVisibility/PlugHub.ReferencePlaneVisibility.csproj" "Reference plane visibility solution registration"
+
+Require-File "src\PlugHub.FamilyFileSaver\PlugHub.FamilyFileSaver.csproj"
+Require-File "src\PlugHub.FamilyFileSaver\FamilyFileSaverModule.cs"
+Require-File "src\PlugHub.FamilyFileSaver\FamilyItem.cs"
+Require-File "src\PlugHub.FamilyFileSaver\FamilySelectionWindow.xaml"
+Require-File "src\PlugHub.FamilyFileSaver\FamilySelectionWindow.xaml.cs"
+Require-File "src\PlugHub.FamilyFileSaver\SaveFamilyFilesCommand.cs"
+Require-Text "src\PlugHub.FamilyFileSaver\SaveFamilyFilesCommand.cs" "EditFamily" "Family edit API"
+Require-Text "src\PlugHub.FamilyFileSaver\SaveFamilyFilesCommand.cs" "SaveAs" "Family save API"
+Require-Text "src\PlugHub.FamilyFileSaver\SaveFamilyFilesCommand.cs" "FolderBrowserDialog" "Family save destination selector"
+Require-Text "build.ps1" "src\PlugHub.FamilyFileSaver\PlugHub.FamilyFileSaver.csproj" "Family file saver project build registration"
+Require-Text "PlugHub_Packages.slnx" "src/PlugHub.FamilyFileSaver/PlugHub.FamilyFileSaver.csproj" "Family file saver solution registration"
 Reject-Text "packages.json" "builtin:" "Built-in icon reference"
 Reject-Text "packages.json" "Tee/Tap" "Duct preferred junction old Tee/Tap wording"
 Require-Text ".github\workflows\build-package.yml" '$indexVersionPattern = [regex]::new(' "Root indexVersion replacement regex instance"
