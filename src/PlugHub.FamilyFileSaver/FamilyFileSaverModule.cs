@@ -11,7 +11,7 @@ namespace PlugHub.FamilyFileSaver
             return new ModuleDescriptor
             {
                 Id = "plughub.modules.family-file-saver",
-                Name = "族文件保存",
+                Name = "族工具",
                 Description = "读取当前项目所有族，筛选后批量保存到指定文件夹。",
                 State = ModuleState.Enabled,
                 Order = 500,
@@ -25,7 +25,7 @@ namespace PlugHub.FamilyFileSaver
                         Name = "保存族文件",
                         Description = "读取当前项目所有族，排除系统族，弹出选择窗口批量保存到指定文件夹。",
                         Category = "family",
-                        Group = "族文件保存",
+                        Group = "族工具",
                         Tags = new[] { "family", "save", "export" },
                         Order = 510,
                         DefaultState = FeatureState.Visible,

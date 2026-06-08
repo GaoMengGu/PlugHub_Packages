@@ -87,6 +87,78 @@ function Test-VersionTag {
     return ![string]::IsNullOrWhiteSpace($Value) -and $Value -match '^V\d+\.\d+\.\d+$'
 }
 
+function Test-ClassificationMatch {
+    param(
+        [System.Collections.Generic.List[string]]$Values,
+        [string[]]$Tokens
+    )
+
+    foreach ($value in $Values) {
+        if ([string]::IsNullOrWhiteSpace($value)) {
+            continue
+        }
+
+        foreach ($token in $Tokens) {
+            if (![string]::IsNullOrWhiteSpace($token) -and $value.IndexOf($token, [StringComparison]::OrdinalIgnoreCase) -ge 0) {
+                return $true
+            }
+        }
+    }
+
+    return $false
+}
+
+function Get-ExpectedModuleDisplayName {
+    param([object]$Module)
+
+    $familyDisplayName = ConvertFrom-Json '"\u65cf\u5de5\u5177"'
+    $civilDisplayName = ConvertFrom-Json '"\u571f\u5efa\u5de5\u5177"'
+    $mepDisplayName = ConvertFrom-Json '"\u673a\u7535\u5de5\u5177"'
+    $drawingDisplayName = ConvertFrom-Json '"\u51fa\u56fe\u5de5\u5177"'
+    $coordinationDisplayName = ConvertFrom-Json '"\u7ba1\u7efc\u5de5\u5177"'
+    $viewDisplayName = ConvertFrom-Json '"\u89c6\u56fe\u5de5\u5177"'
+    $miscDisplayName = ConvertFrom-Json '"\u5c0f\u5de5\u5177"'
+
+    $values = New-Object System.Collections.Generic.List[string]
+    foreach ($value in @($Module.category, $Module.id, $Module.description)) {
+        if (![string]::IsNullOrWhiteSpace([string]$value)) {
+            $values.Add([string]$value)
+        }
+    }
+
+    foreach ($tag in @($Module.tags)) {
+        if (![string]::IsNullOrWhiteSpace([string]$tag)) {
+            $values.Add([string]$tag)
+        }
+    }
+
+    if (Test-ClassificationMatch $values @("family", (ConvertFrom-Json '"\u65cf"'))) {
+        return $familyDisplayName
+    }
+
+    if (Test-ClassificationMatch $values @("civil", "architecture", "structural", "structure", (ConvertFrom-Json '"\u571f\u5efa"'))) {
+        return $civilDisplayName
+    }
+
+    if (Test-ClassificationMatch $values @("coordination", "pipeline-coordination", "pipe-coordination", "duct-coordination", "clash", (ConvertFrom-Json '"\u7ba1\u7efc"'), (ConvertFrom-Json '"\u7ba1\u7ebf\u7efc\u5408"'))) {
+        return $coordinationDisplayName
+    }
+
+    if (Test-ClassificationMatch $values @("drawing", "annotation", "documentation", "sheet", "tag", "dimension", (ConvertFrom-Json '"\u51fa\u56fe"'), (ConvertFrom-Json '"\u6ce8\u91ca"'))) {
+        return $drawingDisplayName
+    }
+
+    if (Test-ClassificationMatch $values @("mep", "mechanical", "electrical", "plumbing", "duct", "pipe", (ConvertFrom-Json '"\u673a\u7535"'))) {
+        return $mepDisplayName
+    }
+
+    if (Test-ClassificationMatch $values @("view", "visibility", (ConvertFrom-Json '"\u89c6\u56fe"'))) {
+        return $viewDisplayName
+    }
+
+    return $miscDisplayName
+}
+
 function Require-FeatureIcon {
     param(
         [object]$Feature,
@@ -156,6 +228,11 @@ else {
 
         if ([string]::IsNullOrWhiteSpace([string]$module.category)) {
             Add-Failure "Module $($module.id) must define category"
+        }
+
+        $expectedDisplayName = Get-ExpectedModuleDisplayName $module
+        if ($module.displayName -ne $expectedDisplayName) {
+            Add-Failure "Module $($module.id) displayName must be $expectedDisplayName for its category/tags"
         }
 
         foreach ($property in @("type", "name", "sourceId", "resolvedBaseDirectory", "dependsOn", "enabled", "visible", "order")) {
