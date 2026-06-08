@@ -6,7 +6,7 @@ using System.Windows.Forms;
 using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
-using RevitApplication = Autodesk.Revit.ApplicationServices.Application;
+using Autodesk.Revit.UI.Events;
 
 namespace PlugHub.FamilyFileSaver
 {
@@ -61,8 +61,7 @@ namespace PlugHub.FamilyFileSaver
                         }
                         string saveFolder = destDialog.SelectedPath;
 
-                        RevitApplication app = document.Application;
-                        SaveFamilies(app, selectedFamilies, saveFolder);
+                        SaveFamilies(uiDocument.Application, selectedFamilies, saveFolder);
                     }
                 }
 
@@ -115,67 +114,76 @@ namespace PlugHub.FamilyFileSaver
             return items.OrderBy(f => f.Category).ThenBy(f => f.Name).ToList();
         }
 
-        private static void SaveFamilies(RevitApplication app, List<FamilyItem> families, string saveFolder)
+        private static void SaveFamilies(UIApplication uiApplication, List<FamilyItem> families, string saveFolder)
         {
             int successCount = 0;
             int failCount = 0;
             List<string> errors = new List<string>();
+            EventHandler<DialogBoxShowingEventArgs> dialogHandler = DismissBackgroundDialog;
 
-            foreach (FamilyItem item in families)
+            uiApplication.DialogBoxShowing += dialogHandler;
+            try
             {
-                Document? familyDoc = null;
-                try
+                foreach (FamilyItem item in families)
                 {
-                    Family? family = item.FamilyObject;
-                    if (family == null)
+                    Document? familyDoc = null;
+                    try
+                    {
+                        Family? family = item.FamilyObject;
+                        if (family == null)
+                        {
+                            failCount++;
+                            errors.Add(item.Name + ": 族对象为空");
+                            continue;
+                        }
+
+                        familyDoc = family.Document.EditFamily(family);
+                        if (familyDoc == null)
+                        {
+                            failCount++;
+                            errors.Add(item.Name + ": 无法打开族文档");
+                            continue;
+                        }
+
+                        string categoryFolder = Path.Combine(saveFolder, GetSafeFileName(item.Category));
+                        if (!Directory.Exists(categoryFolder))
+                        {
+                            Directory.CreateDirectory(categoryFolder);
+                        }
+
+                        string safeFileName = GetSafeFileName(item.Name) + ".rfa";
+                        string destPath = Path.Combine(categoryFolder, safeFileName);
+
+                        int counter = 1;
+                        while (File.Exists(destPath))
+                        {
+                            destPath = Path.Combine(categoryFolder, GetSafeFileName(item.Name) + "_" + counter + ".rfa");
+                            counter++;
+                        }
+
+                        SaveAsOptions saveOptions = new SaveAsOptions();
+                        saveOptions.OverwriteExistingFile = false;
+
+                        familyDoc.SaveAs(destPath, saveOptions);
+                        successCount++;
+                    }
+                    catch (Exception ex)
                     {
                         failCount++;
-                        errors.Add(item.Name + ": 族对象为空");
-                        continue;
+                        errors.Add(item.Name + ": " + ex.Message);
                     }
-
-                    familyDoc = family.Document.EditFamily(family);
-                    if (familyDoc == null)
+                    finally
                     {
-                        failCount++;
-                        errors.Add(item.Name + ": 无法打开族文档");
-                        continue;
-                    }
-
-                    string categoryFolder = Path.Combine(saveFolder, GetSafeFileName(item.Category));
-                    if (!Directory.Exists(categoryFolder))
-                    {
-                        Directory.CreateDirectory(categoryFolder);
-                    }
-
-                    string safeFileName = GetSafeFileName(item.Name) + ".rfa";
-                    string destPath = Path.Combine(categoryFolder, safeFileName);
-
-                    int counter = 1;
-                    while (File.Exists(destPath))
-                    {
-                        destPath = Path.Combine(categoryFolder, GetSafeFileName(item.Name) + "_" + counter + ".rfa");
-                        counter++;
-                    }
-
-                    SaveAsOptions saveOptions = new SaveAsOptions();
-                    saveOptions.OverwriteExistingFile = false;
-
-                    familyDoc.SaveAs(destPath, saveOptions);
-                    successCount++;
-                }
-                catch (Exception ex)
-                {
-                    failCount++;
-                    errors.Add(item.Name + ": " + ex.Message);
-                }
-                finally
-                {
-                    if (familyDoc != null)
-                    {
-                        try { familyDoc.Close(false); } catch { }
+                        if (familyDoc != null)
+                        {
+                            try { familyDoc.Close(false); } catch { }
+                        }
                     }
                 }
+            }
+            finally
+            {
+                uiApplication.DialogBoxShowing -= dialogHandler;
             }
 
             string resultMsg = "保存完成！\n成功: " + successCount + " 个族\n失败: " + failCount + " 个族";
@@ -183,11 +191,24 @@ namespace PlugHub.FamilyFileSaver
             {
                 string errorDetail = string.Join("\n", errors.Take(10));
                 if (errors.Count > 10)
+                {
                     errorDetail += "\n... 还有 " + (errors.Count - 10) + " 个错误";
+                }
                 resultMsg += "\n\n失败详情:\n" + errorDetail;
             }
 
             TaskDialog.Show("保存族文件", resultMsg);
+        }
+
+        private static void DismissBackgroundDialog(object? sender, DialogBoxShowingEventArgs args)
+        {
+            try
+            {
+                args.OverrideResult((int)TaskDialogResult.Ok);
+            }
+            catch
+            {
+            }
         }
 
         private static string GetSafeFileName(string name)

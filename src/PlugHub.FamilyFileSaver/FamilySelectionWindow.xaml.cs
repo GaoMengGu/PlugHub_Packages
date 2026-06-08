@@ -38,6 +38,8 @@ namespace PlugHub.FamilyFileSaver
     {
         private readonly List<FamilyItem> _allFamilies;
         private readonly ObservableCollection<FamilyViewModel> _filteredFamilies;
+        private readonly HashSet<int> _selectedFamilyIds = new HashSet<int>();
+        private bool _isApplyingFilter;
 
         public List<FamilyItem> SelectedFamilies { get; private set; } = new List<FamilyItem>();
 
@@ -62,6 +64,8 @@ namespace PlugHub.FamilyFileSaver
 
         private void ApplyFilter()
         {
+            CaptureCurrentSelections();
+
             string searchText = SearchBox.Text ?? "";
             string selectedCategory = CategoryCombo.SelectedItem?.ToString() ?? "全部";
 
@@ -73,21 +77,25 @@ namespace PlugHub.FamilyFileSaver
                 return matchesSearch && matchesCategory;
             }).ToList();
 
-            // 保留之前的勾选状态
-            var checkedIds = new HashSet<ElementId>(
-                _filteredFamilies.Where(f => f.IsChecked).Select(f => f.Item.Id));
-
+            _isApplyingFilter = true;
             _filteredFamilies.Clear();
-            foreach (var item in filtered)
+            try
             {
-                _filteredFamilies.Add(new FamilyViewModel
+                foreach (var item in filtered)
                 {
-                    Name = item.Name,
-                    Category = item.Category,
-                    InstanceCount = item.InstanceCount,
-                    Item = item,
-                    IsChecked = checkedIds.Contains(item.Id)
-                });
+                    _filteredFamilies.Add(new FamilyViewModel
+                    {
+                        Name = item.Name,
+                        Category = item.Category,
+                        InstanceCount = item.InstanceCount,
+                        Item = item,
+                        IsChecked = _selectedFamilyIds.Contains(GetFamilyKey(item))
+                    });
+                }
+            }
+            finally
+            {
+                _isApplyingFilter = false;
             }
 
             FamilyListView.ItemsSource = null;
@@ -98,8 +106,10 @@ namespace PlugHub.FamilyFileSaver
 
         private void UpdateStatus()
         {
-            int checkedCount = _filteredFamilies.Count(f => f.IsChecked);
-            StatusText.Text = $"已选中 {checkedCount} 个族 / 共 {_allFamilies.Count} 个";
+            CaptureCurrentSelections();
+
+            int visibleCheckedCount = _filteredFamilies.Count(f => f.IsChecked);
+            StatusText.Text = $"已选中 {_selectedFamilyIds.Count} 个族 / 当前显示 {visibleCheckedCount} 个 / 共 {_allFamilies.Count} 个";
         }
 
         private void SearchBox_TextChanged(object sender, TextChangedEventArgs e)
@@ -118,20 +128,36 @@ namespace PlugHub.FamilyFileSaver
             foreach (var item in _filteredFamilies)
             {
                 item.IsChecked = isChecked;
+                SetSelection(item.Item, isChecked);
             }
             UpdateStatus();
         }
 
         private void ItemCheckBox_CheckedChanged(object sender, RoutedEventArgs e)
         {
+            if (_isApplyingFilter)
+            {
+                return;
+            }
+
+            if (sender is CheckBox checkBox && checkBox.DataContext is FamilyViewModel viewModel)
+            {
+                SetSelection(viewModel.Item, viewModel.IsChecked);
+            }
+            else
+            {
+                CaptureCurrentSelections();
+            }
+
             UpdateStatus();
         }
 
         private void SaveButton_Click(object sender, RoutedEventArgs e)
         {
-            SelectedFamilies = _filteredFamilies
-                .Where(f => f.IsChecked)
-                .Select(f => f.Item)
+            CaptureCurrentSelections();
+
+            SelectedFamilies = _allFamilies
+                .Where(f => _selectedFamilyIds.Contains(GetFamilyKey(f)))
                 .ToList();
 
             if (SelectedFamilies.Count == 0)
@@ -149,6 +175,32 @@ namespace PlugHub.FamilyFileSaver
         {
             DialogResult = false;
             Close();
+        }
+
+        private void CaptureCurrentSelections()
+        {
+            foreach (var viewModel in _filteredFamilies)
+            {
+                SetSelection(viewModel.Item, viewModel.IsChecked);
+            }
+        }
+
+        private void SetSelection(FamilyItem item, bool isSelected)
+        {
+            int key = GetFamilyKey(item);
+            if (isSelected)
+            {
+                _selectedFamilyIds.Add(key);
+            }
+            else
+            {
+                _selectedFamilyIds.Remove(key);
+            }
+        }
+
+        private static int GetFamilyKey(FamilyItem item)
+        {
+            return item.Id.IntegerValue;
         }
     }
 }
