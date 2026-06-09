@@ -532,6 +532,9 @@ Require-Text ".github\workflows\build-package.yml" '$indexVersionPattern = [rege
 Require-Text ".github\workflows\build-package.yml" '$manifestText = $indexVersionPattern.Replace($manifestText, (' "Root indexVersion replacement count-limited call"
 Require-Text ".github\workflows\build-package.yml" 'refs/heads/codex' "Codex branch workflow registration"
 Require-Text ".github\workflows\build-package.yml" 'refs/heads/hermes' "Hermes branch workflow registration"
+Require-Text ".github\workflows\build-package.yml" 'if: github.actor != ''github-actions[bot]'' && github.event_name == ''push'' && contains(fromJson(''["refs/heads/codex","refs/heads/hermes"]''), github.ref)' "Package output commit branch allow-list"
+Reject-Text ".github\workflows\build-package.yml" 'if: github.actor != ''github-actions[bot]'' && ((github.event_name == ''push'' && contains(fromJson(''["refs/heads/main","refs/heads/codex","refs/heads/hermes"]''), github.ref)) || (github.event_name == ''workflow_dispatch'' && github.ref == ''refs/heads/main''))' "Package output commit main branch allow-list"
+Reject-Text ".github\workflows\build-package.yml" "(github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')" "Package output commit manual main write-back condition"
 Require-Text ".github\workflows\build-package.yml" 'origin/$githubRefName:refs/heads/$githubRefName' "Gitee working branch mirror refspec"
 Require-Text ".github\workflows\build-package.yml" 'Sync Gitee release asset' "Gitee release asset sync step"
 
