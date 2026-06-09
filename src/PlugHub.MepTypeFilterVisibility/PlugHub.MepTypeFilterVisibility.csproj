@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <AssemblyName>PlugHub.MepTypeFilterVisibility</AssemblyName>
+    <RootNamespace>PlugHub.MepTypeFilterVisibility</RootNamespace>
+    <OutputType>Library</OutputType>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(RevitApiReferenceMode)' == 'Installed'">
+    <Reference Include="RevitAPI">
+      <HintPath>$(RevitApiDir)\RevitAPI.dll</HintPath>
+      <Private>false</Private>
+      <EmbedInteropTypes>false</EmbedInteropTypes>
+    </Reference>
+    <Reference Include="RevitAPIUI">
+      <HintPath>$(RevitApiDir)\RevitAPIUI.dll</HintPath>
+      <Private>false</Private>
+      <EmbedInteropTypes>false</EmbedInteropTypes>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(RevitApiReferenceMode)' == 'NuGet'">
+    <PackageReference Include="Autodesk.Revit.SDK" Version="$(RevitApiNuGetVersion)" PrivateAssets="all" ExcludeAssets="runtime" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\revittool\src\PlugHub.Contracts\PlugHub.Contracts.csproj" />
+  </ItemGroup>
+
+  <Target Name="EnsureRevitApiReferenceMode" BeforeTargets="ResolveReferences">
+    <Error Condition="'$(RevitApiReferenceMode)' != 'Installed' and '$(RevitApiReferenceMode)' != 'NuGet'" Text="Unsupported RevitApiReferenceMode '$(RevitApiReferenceMode)'. Use Installed for local Revit API DLLs or NuGet for CI compile references." />
+    <Error Condition="'$(RevitApiReferenceMode)' == 'NuGet' and '$(RevitApiNuGetVersion)' == ''" Text="RevitApiNuGetVersion is required when RevitApiReferenceMode=NuGet." />
+  </Target>
+
+  <Target Name="EnsureInstalledRevitApiReferences" BeforeTargets="ResolveReferences" Condition="'$(RevitApiReferenceMode)' == 'Installed'">
+    <Error Condition="!Exists('$(RevitApiDir)\RevitAPI.dll')" Text="RevitAPI.dll not found. Pass /p:RevitApiDir=&quot;D:\Program Files\Autodesk\Revit 2020&quot;." />
+    <Error Condition="!Exists('$(RevitApiDir)\RevitAPIUI.dll')" Text="RevitAPIUI.dll not found. Pass /p:RevitApiDir=&quot;D:\Program Files\Autodesk\Revit 2020&quot;." />
+  </Target>
+</Project>

@@ -387,6 +387,30 @@ else {
         }
     }
 
+    $mepTypeFilterVisibilityModule = $manifest.modules | Where-Object { $_.id -eq "plughub.modules.mep-type-filter-visibility" } | Select-Object -First 1
+    if ($null -eq $mepTypeFilterVisibilityModule) {
+        Add-Failure "Missing MEP type filter visibility module in packages.json"
+    }
+    else {
+        if ($mepTypeFilterVisibilityModule.assembly -ne "dist/PlugHub.MepTypeFilterVisibility.dll") {
+            Add-Failure "MEP type filter visibility module assembly must be dist/PlugHub.MepTypeFilterVisibility.dll"
+        }
+
+        $feature = $mepTypeFilterVisibilityModule.features | Where-Object { $_.id -eq "plughub.modules.mep-type-filter-visibility.apply" } | Select-Object -First 1
+        if ($null -eq $feature) {
+            Add-Failure "Missing MEP type filter visibility feature in packages.json"
+        }
+        else {
+            if ($feature.displayName -ne (ConvertFrom-Json '"\u673a\u7535\u7c7b\u578b\u8fc7\u6ee4\u663e\u793a"')) {
+                Add-Failure "MEP type filter visibility feature displayName must match the manifest display name"
+            }
+            if ($feature.commandType -ne "PlugHub.MepTypeFilterVisibility.ApplyMepTypeFilterVisibilityCommand") {
+                Add-Failure "MEP type filter visibility commandType must be PlugHub.MepTypeFilterVisibility.ApplyMepTypeFilterVisibilityCommand"
+            }
+            Require-FeatureIcon $feature "icons/mep-type-filter-visibility.png"
+        }
+    }
+
     $familyModule = $manifest.modules | Where-Object { $_.id -eq "plughub.modules.family-material-parameters" } | Select-Object -First 1
     if ($null -eq $familyModule) {
         Add-Failure "Missing family material parameters module in packages.json"
@@ -468,6 +492,27 @@ Require-Text "src\PlugHub.FamilyFileSaver\FamilySelectionWindow.xaml.cs" "_selec
 Require-Text "src\PlugHub.FamilyFileSaver\FamilySelectionWindow.xaml.cs" "CaptureCurrentSelections" "Family saver filter selection persistence"
 Require-Text "build.ps1" "src\PlugHub.FamilyFileSaver\PlugHub.FamilyFileSaver.csproj" "Family file saver project build registration"
 Require-Text "PlugHub_Packages.slnx" "src/PlugHub.FamilyFileSaver/PlugHub.FamilyFileSaver.csproj" "Family file saver solution registration"
+
+Require-File "src\PlugHub.MepTypeFilterVisibility\PlugHub.MepTypeFilterVisibility.csproj"
+Require-File "src\PlugHub.MepTypeFilterVisibility\MepTypeFilterVisibilityModule.cs"
+Require-File "src\PlugHub.MepTypeFilterVisibility\ApplyMepTypeFilterVisibilityCommand.cs"
+Require-Text "src\PlugHub.MepTypeFilterVisibility\ApplyMepTypeFilterVisibilityCommand.cs" "PickElementsByRectangle" "MEP type filter rectangle selection prompt"
+Require-Text "src\PlugHub.MepTypeFilterVisibility\ApplyMepTypeFilterVisibilityCommand.cs" "BuiltInCategory.OST_DuctCurves" "MEP type filter duct category"
+Require-Text "src\PlugHub.MepTypeFilterVisibility\ApplyMepTypeFilterVisibilityCommand.cs" "BuiltInCategory.OST_DuctFitting" "MEP type filter duct fitting category"
+Require-Text "src\PlugHub.MepTypeFilterVisibility\ApplyMepTypeFilterVisibilityCommand.cs" "BuiltInCategory.OST_DuctAccessory" "MEP type filter duct accessory category"
+Require-Text "src\PlugHub.MepTypeFilterVisibility\ApplyMepTypeFilterVisibilityCommand.cs" "BuiltInCategory.OST_DuctTerminal" "MEP type filter duct terminal category"
+Require-Text "src\PlugHub.MepTypeFilterVisibility\ApplyMepTypeFilterVisibilityCommand.cs" "BuiltInCategory.OST_PipeCurves" "MEP type filter pipe category"
+Require-Text "src\PlugHub.MepTypeFilterVisibility\ApplyMepTypeFilterVisibilityCommand.cs" "BuiltInCategory.OST_PipeFitting" "MEP type filter pipe fitting category"
+Require-Text "src\PlugHub.MepTypeFilterVisibility\ApplyMepTypeFilterVisibilityCommand.cs" "BuiltInCategory.OST_PipeAccessory" "MEP type filter pipe accessory category"
+Require-Text "src\PlugHub.MepTypeFilterVisibility\ApplyMepTypeFilterVisibilityCommand.cs" "BuiltInCategory.OST_CableTray" "MEP type filter cable tray category"
+Require-Text "src\PlugHub.MepTypeFilterVisibility\ApplyMepTypeFilterVisibilityCommand.cs" "BuiltInCategory.OST_CableTrayFitting" "MEP type filter cable tray fitting category"
+Require-Text "src\PlugHub.MepTypeFilterVisibility\ApplyMepTypeFilterVisibilityCommand.cs" "BuiltInParameter.RBS_DUCT_SYSTEM_TYPE_PARAM" "MEP type filter duct system type rule"
+Require-Text "src\PlugHub.MepTypeFilterVisibility\ApplyMepTypeFilterVisibilityCommand.cs" "BuiltInParameter.RBS_PIPING_SYSTEM_TYPE_PARAM" "MEP type filter pipe system type rule"
+Require-Text "src\PlugHub.MepTypeFilterVisibility\ApplyMepTypeFilterVisibilityCommand.cs" "BuiltInParameter.RBS_CABLETRAYCONDUIT_SYSTEM_TYPE" "MEP type filter cable tray service type rule"
+Require-Text "src\PlugHub.MepTypeFilterVisibility\ApplyMepTypeFilterVisibilityCommand.cs" "ParameterFilterElement.Create" "MEP type filter creation API"
+Require-Text "src\PlugHub.MepTypeFilterVisibility\ApplyMepTypeFilterVisibilityCommand.cs" "SetFilterVisibility" "MEP type filter view visibility API"
+Require-Text "build.ps1" "src\PlugHub.MepTypeFilterVisibility\PlugHub.MepTypeFilterVisibility.csproj" "MEP type filter visibility project build registration"
+Require-Text "PlugHub_Packages.slnx" "src/PlugHub.MepTypeFilterVisibility/PlugHub.MepTypeFilterVisibility.csproj" "MEP type filter visibility solution registration"
 Reject-Text "packages.json" "builtin:" "Built-in icon reference"
 Reject-Text "packages.json" "Tee/Tap" "Duct preferred junction old Tee/Tap wording"
 Require-Text ".github\workflows\build-package.yml" '$indexVersionPattern = [regex]::new(' "Root indexVersion replacement regex instance"

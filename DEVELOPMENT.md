@@ -26,6 +26,9 @@ PlugHub_Packages/
     PlugHub.LevelVisibility/
       LevelVisibilityModule.cs
       ToggleLevelVisibilityCommand.cs
+    PlugHub.MepTypeFilterVisibility/
+      MepTypeFilterVisibilityModule.cs
+      ApplyMepTypeFilterVisibilityCommand.cs
 ```
 
 约定：

@@ -147,6 +147,33 @@
           "commandType": "PlugHub.FamilyFileSaver.SaveFamilyFilesCommand"
         }
       ]
+    },
+    {
+      "id": "plughub.modules.mep-type-filter-visibility",
+      "version": "V1.0.0",
+      "author": "GAOMENGGU",
+      "displayName": "机电工具",
+      "description": "按选中风管、管道或桥架类型控制当前视图过滤器显示。",
+      "assembly": "dist/PlugHub.MepTypeFilterVisibility.dll",
+      "category": "mep",
+      "tags": [
+        "mep",
+        "duct",
+        "pipe",
+        "cable-tray",
+        "filter",
+        "visibility",
+        "revit-api"
+      ],
+      "features": [
+        {
+          "id": "plughub.modules.mep-type-filter-visibility.apply",
+          "displayName": "机电类型过滤显示",
+          "description": "框选风管、管道或桥架后，按系统类型或设备类型创建并切换当前视图过滤器。",
+          "iconPath": "icons/mep-type-filter-visibility.png",
+          "commandType": "PlugHub.MepTypeFilterVisibility.ApplyMepTypeFilterVisibilityCommand"
+        }
+      ]
     }
   ]
 }
