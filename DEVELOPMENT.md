@@ -121,8 +121,9 @@ packages/dropins/
 3. 创建一个模块描述类，实现 `IPlugHubModule`。
 4. 创建一个命令类，实现 Revit 的 `IExternalCommand`。
 5. 在 `packages.json` 中新增模块记录和功能记录，并为模块设置 `version` 和 `author`。
-6. 运行 `build.ps1`，确认 DLL 输出到 `dist`。
-7. 启动或重启 Revit，让 PlugHub 重新扫描插件包。
+6. 放入 `icons/<feature>.png`，图标默认按 [icons.md](icons.md) 使用文生图生成候选，再后处理为 32×32 透明底 PNG；主体控制在 24×24 安全区，四周保留 4px 透明留白，不提交 64×64 或多倍图。
+7. 运行 `build.ps1`，确认 DLL 输出到 `dist`。
+8. 启动或重启 Revit，让 PlugHub 重新扫描插件包。
 
 ## 清单字段约定
 
@@ -137,7 +138,8 @@ packages/dropins/
 - `feature.commandType` 必须是完整类型名，并实现 `Autodesk.Revit.UI.IExternalCommand`。
 - `feature.commandAssembly` 不再写入；feature 默认继承所属 module 的 `assembly`。
 - `enabled`、`visible`、`order`、`defaultState`、`buttonSize`、`feature.group`、`feature.category` 和 `feature.tags` 不写入仓库清单，默认状态和布局由 PlugHub 框架及用户本地配置负责。
-- `iconPath` 为空时使用 PlugHub 默认图标；相对路径按插件包清单所在目录解析。
+- `iconPath` 为空时使用 PlugHub 默认图标；相对路径按插件包清单所在目录解析。仓库内真实图标必须遵循 [icons.md](icons.md)，默认使用文生图生成候选，并以后处理产出的 32×32 透明底 PNG 入库，保留 4px 安全留白以避免 Revit Ribbon 裁切。
+
 ## 验证边界
 
 本目录可以通过 `dotnet build` 验证 C# 编译。真实 Revit 命令行为必须在 Windows + Revit 2020 中使用测试模型副本或族文件副本验证。

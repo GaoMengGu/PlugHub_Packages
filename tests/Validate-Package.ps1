@@ -87,6 +87,58 @@ function Test-VersionTag {
     return ![string]::IsNullOrWhiteSpace($Value) -and $Value -match '^V\d+\.\d+\.\d+$'
 }
 
+function ConvertFrom-BigEndianUInt32 {
+    param(
+        [byte[]]$Bytes,
+        [int]$Offset
+    )
+
+    return (([uint32]$Bytes[$Offset] -shl 24) -bor ([uint32]$Bytes[$Offset + 1] -shl 16) -bor ([uint32]$Bytes[$Offset + 2] -shl 8) -bor [uint32]$Bytes[$Offset + 3])
+}
+
+function Require-RevitRibbonPng {
+    param([string]$RelativePath)
+
+    $path = Join-Path $Root $RelativePath
+    if (!(Test-Path -LiteralPath $path)) {
+        Add-Failure "Icon file is missing: $RelativePath"
+        return
+    }
+
+    $bytes = [IO.File]::ReadAllBytes($path)
+    $signature = [byte[]](0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A)
+    if ($bytes.Length -lt 33) {
+        Add-Failure "Icon $RelativePath is too small to be a valid PNG"
+        return
+    }
+
+    for ($i = 0; $i -lt $signature.Length; $i++) {
+        if ($bytes[$i] -ne $signature[$i]) {
+            Add-Failure "Icon $RelativePath must be a PNG file"
+            return
+        }
+    }
+
+    $chunkType = [Text.Encoding]::ASCII.GetString($bytes, 12, 4)
+    if ($chunkType -ne "IHDR") {
+        Add-Failure "Icon $RelativePath must start with a PNG IHDR chunk"
+        return
+    }
+
+    $width = ConvertFrom-BigEndianUInt32 $bytes 16
+    $height = ConvertFrom-BigEndianUInt32 $bytes 20
+    $bitDepth = [int]$bytes[24]
+    $colorType = [int]$bytes[25]
+
+    if ($width -ne 32 -or $height -ne 32) {
+        Add-Failure "Icon $RelativePath must be exactly 32x32 px"
+    }
+
+    if ($bitDepth -ne 8 -or $colorType -ne 6) {
+        Add-Failure "Icon $RelativePath must be an 8-bit RGBA PNG with transparency support"
+    }
+}
+
 function Test-ClassificationMatch {
     param(
         [System.Collections.Generic.List[string]]$Values,
@@ -194,7 +246,10 @@ function Require-FeatureIcon {
     $resolvedPath = Join-Path $Root $iconPath
     if (!(Test-Path -LiteralPath $resolvedPath)) {
         Add-Failure "Feature $($Feature.id) icon file is missing: $iconPath"
+        return
     }
+
+    Require-RevitRibbonPng $iconPath
 }
 
 $manifestPath = Join-Path $Root "packages.json"
