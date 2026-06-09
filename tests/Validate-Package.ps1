@@ -87,6 +87,130 @@ function Test-VersionTag {
     return ![string]::IsNullOrWhiteSpace($Value) -and $Value -match '^V\d+\.\d+\.\d+$'
 }
 
+function ConvertFrom-BigEndianUInt32 {
+    param(
+        [byte[]]$Bytes,
+        [int]$Offset
+    )
+
+    return (([uint32]$Bytes[$Offset] -shl 24) -bor ([uint32]$Bytes[$Offset + 1] -shl 16) -bor ([uint32]$Bytes[$Offset + 2] -shl 8) -bor [uint32]$Bytes[$Offset + 3])
+}
+
+function Require-RevitRibbonPng {
+    param([string]$RelativePath)
+
+    $path = Join-Path $Root $RelativePath
+    if (!(Test-Path -LiteralPath $path)) {
+        Add-Failure "Icon file is missing: $RelativePath"
+        return
+    }
+
+    $bytes = [IO.File]::ReadAllBytes($path)
+    $signature = [byte[]](0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A)
+    if ($bytes.Length -lt 33) {
+        Add-Failure "Icon $RelativePath is too small to be a valid PNG"
+        return
+    }
+
+    for ($i = 0; $i -lt $signature.Length; $i++) {
+        if ($bytes[$i] -ne $signature[$i]) {
+            Add-Failure "Icon $RelativePath must be a PNG file"
+            return
+        }
+    }
+
+    $chunkType = [Text.Encoding]::ASCII.GetString($bytes, 12, 4)
+    if ($chunkType -ne "IHDR") {
+        Add-Failure "Icon $RelativePath must start with a PNG IHDR chunk"
+        return
+    }
+
+    $width = ConvertFrom-BigEndianUInt32 $bytes 16
+    $height = ConvertFrom-BigEndianUInt32 $bytes 20
+    $bitDepth = [int]$bytes[24]
+    $colorType = [int]$bytes[25]
+
+    if ($width -ne 32 -or $height -ne 32) {
+        Add-Failure "Icon $RelativePath must be exactly 32x32 px"
+    }
+
+    if ($bitDepth -ne 8 -or $colorType -ne 6) {
+        Add-Failure "Icon $RelativePath must be an 8-bit RGBA PNG with transparency support"
+    }
+}
+
+function Test-ClassificationMatch {
+    param(
+        [System.Collections.Generic.List[string]]$Values,
+        [string[]]$Tokens
+    )
+
+    foreach ($value in $Values) {
+        if ([string]::IsNullOrWhiteSpace($value)) {
+            continue
+        }
+
+        foreach ($token in $Tokens) {
+            if (![string]::IsNullOrWhiteSpace($token) -and $value.IndexOf($token, [StringComparison]::OrdinalIgnoreCase) -ge 0) {
+                return $true
+            }
+        }
+    }
+
+    return $false
+}
+
+function Get-ExpectedModuleDisplayName {
+    param([object]$Module)
+
+    $familyDisplayName = ConvertFrom-Json '"\u65cf\u5de5\u5177"'
+    $civilDisplayName = ConvertFrom-Json '"\u571f\u5efa\u5de5\u5177"'
+    $mepDisplayName = ConvertFrom-Json '"\u673a\u7535\u5de5\u5177"'
+    $drawingDisplayName = ConvertFrom-Json '"\u51fa\u56fe\u5de5\u5177"'
+    $coordinationDisplayName = ConvertFrom-Json '"\u7ba1\u7efc\u5de5\u5177"'
+    $viewDisplayName = ConvertFrom-Json '"\u89c6\u56fe\u5de5\u5177"'
+    $miscDisplayName = ConvertFrom-Json '"\u5c0f\u5de5\u5177"'
+
+    $values = New-Object System.Collections.Generic.List[string]
+    foreach ($value in @($Module.category, $Module.id, $Module.description)) {
+        if (![string]::IsNullOrWhiteSpace([string]$value)) {
+            $values.Add([string]$value)
+        }
+    }
+
+    foreach ($tag in @($Module.tags)) {
+        if (![string]::IsNullOrWhiteSpace([string]$tag)) {
+            $values.Add([string]$tag)
+        }
+    }
+
+    if (Test-ClassificationMatch $values @("family", (ConvertFrom-Json '"\u65cf"'))) {
+        return $familyDisplayName
+    }
+
+    if (Test-ClassificationMatch $values @("civil", "architecture", "structural", "structure", (ConvertFrom-Json '"\u571f\u5efa"'))) {
+        return $civilDisplayName
+    }
+
+    if (Test-ClassificationMatch $values @("coordination", "pipeline-coordination", "pipe-coordination", "duct-coordination", "clash", (ConvertFrom-Json '"\u7ba1\u7efc"'), (ConvertFrom-Json '"\u7ba1\u7ebf\u7efc\u5408"'))) {
+        return $coordinationDisplayName
+    }
+
+    if (Test-ClassificationMatch $values @("drawing", "annotation", "documentation", "sheet", "tag", "dimension", (ConvertFrom-Json '"\u51fa\u56fe"'), (ConvertFrom-Json '"\u6ce8\u91ca"'))) {
+        return $drawingDisplayName
+    }
+
+    if (Test-ClassificationMatch $values @("mep", "mechanical", "electrical", "plumbing", "duct", "pipe", (ConvertFrom-Json '"\u673a\u7535"'))) {
+        return $mepDisplayName
+    }
+
+    if (Test-ClassificationMatch $values @("view", "visibility", (ConvertFrom-Json '"\u89c6\u56fe"'))) {
+        return $viewDisplayName
+    }
+
+    return $miscDisplayName
+}
+
 function Require-FeatureIcon {
     param(
         [object]$Feature,
@@ -122,7 +246,10 @@ function Require-FeatureIcon {
     $resolvedPath = Join-Path $Root $iconPath
     if (!(Test-Path -LiteralPath $resolvedPath)) {
         Add-Failure "Feature $($Feature.id) icon file is missing: $iconPath"
+        return
     }
+
+    Require-RevitRibbonPng $iconPath
 }
 
 $manifestPath = Join-Path $Root "packages.json"
@@ -158,6 +285,11 @@ else {
             Add-Failure "Module $($module.id) must define category"
         }
 
+        $expectedDisplayName = Get-ExpectedModuleDisplayName $module
+        if ($module.displayName -ne $expectedDisplayName) {
+            Add-Failure "Module $($module.id) displayName must be $expectedDisplayName for its category/tags"
+        }
+
         foreach ($property in @("type", "name", "sourceId", "resolvedBaseDirectory", "dependsOn", "enabled", "visible", "order")) {
             Reject-JsonProperty $module $property "Module $($module.id)"
         }
@@ -183,7 +315,7 @@ else {
             Add-Failure "Missing grid visibility toggle feature in packages.json"
         }
         else {
-            if ($feature.displayName -ne (ConvertFrom-Json '"\u8f74\u7f51\u663e\u9690\u5207\u6362"')) {
+            if ($feature.displayName -ne (ConvertFrom-Json '"\u8f74\u7f51\u663e\u9690"')) {
                 Add-Failure "Grid visibility feature displayName must match the manifest display name"
             }
             if ($feature.commandType -ne "PlugHub.GridVisibility.ToggleGridVisibilityCommand") {
@@ -207,7 +339,7 @@ else {
             Add-Failure "Missing level visibility toggle feature in packages.json"
         }
         else {
-            if ($feature.displayName -ne (ConvertFrom-Json '"\u6807\u9ad8\u663e\u9690\u5207\u6362"')) {
+            if ($feature.displayName -ne (ConvertFrom-Json '"\u6807\u9ad8\u663e\u9690"')) {
                 Add-Failure "Level visibility feature displayName must match the manifest display name"
             }
             if ($feature.commandType -ne "PlugHub.LevelVisibility.ToggleLevelVisibilityCommand") {
@@ -231,7 +363,7 @@ else {
             Add-Failure "Missing reference plane visibility toggle feature in packages.json"
         }
         else {
-            if ($feature.displayName -ne (ConvertFrom-Json '"\u53c2\u7167\u5e73\u9762\u663e\u9690\u5207\u6362"')) {
+            if ($feature.displayName -ne (ConvertFrom-Json '"\u53c2\u7167\u5e73\u9762\u663e\u9690"')) {
                 Add-Failure "Reference plane visibility feature displayName must match the manifest display name"
             }
             if ($feature.commandType -ne "PlugHub.ReferencePlaneVisibility.ToggleReferencePlaneVisibilityCommand") {
@@ -255,6 +387,30 @@ else {
         }
     }
 
+    $mepTypeFilterVisibilityModule = $manifest.modules | Where-Object { $_.id -eq "plughub.modules.mep-type-filter-visibility" } | Select-Object -First 1
+    if ($null -eq $mepTypeFilterVisibilityModule) {
+        Add-Failure "Missing MEP type filter visibility module in packages.json"
+    }
+    else {
+        if ($mepTypeFilterVisibilityModule.assembly -ne "dist/PlugHub.MepTypeFilterVisibility.dll") {
+            Add-Failure "MEP type filter visibility module assembly must be dist/PlugHub.MepTypeFilterVisibility.dll"
+        }
+
+        $feature = $mepTypeFilterVisibilityModule.features | Where-Object { $_.id -eq "plughub.modules.mep-type-filter-visibility.apply" } | Select-Object -First 1
+        if ($null -eq $feature) {
+            Add-Failure "Missing MEP type filter visibility feature in packages.json"
+        }
+        else {
+            if ($feature.displayName -ne (ConvertFrom-Json '"\u673a\u7535\u8fc7\u6ee4"')) {
+                Add-Failure "MEP type filter visibility feature displayName must match the manifest display name"
+            }
+            if ($feature.commandType -ne "PlugHub.MepTypeFilterVisibility.ApplyMepTypeFilterVisibilityCommand") {
+                Add-Failure "MEP type filter visibility commandType must be PlugHub.MepTypeFilterVisibility.ApplyMepTypeFilterVisibilityCommand"
+            }
+            Require-FeatureIcon $feature "icons/mep-type-filter-visibility.png"
+        }
+    }
+
     $familyModule = $manifest.modules | Where-Object { $_.id -eq "plughub.modules.family-material-parameters" } | Select-Object -First 1
     if ($null -eq $familyModule) {
         Add-Failure "Missing family material parameters module in packages.json"
@@ -265,7 +421,34 @@ else {
             Add-Failure "Missing family material parameters feature in packages.json"
         }
         else {
+            if ($feature.displayName -ne (ConvertFrom-Json '"\u6279\u91cf\u6750\u8d28"')) {
+                Add-Failure "Family material parameters feature displayName must match the manifest display name"
+            }
             Require-FeatureIcon $feature "icons/family-material-parameters.png"
+        }
+    }
+
+    $familyFileSaverModule = $manifest.modules | Where-Object { $_.id -eq "plughub.modules.family-file-saver" } | Select-Object -First 1
+    if ($null -eq $familyFileSaverModule) {
+        Add-Failure "Missing family file saver module in packages.json"
+    }
+    else {
+        if ($familyFileSaverModule.assembly -ne "dist/PlugHub.FamilyFileSaver.dll") {
+            Add-Failure "Family file saver module assembly must be dist/PlugHub.FamilyFileSaver.dll"
+        }
+
+        $feature = $familyFileSaverModule.features | Where-Object { $_.id -eq "plughub.modules.family-file-saver.save" } | Select-Object -First 1
+        if ($null -eq $feature) {
+            Add-Failure "Missing family file saver feature in packages.json"
+        }
+        else {
+            if ($feature.displayName -ne (ConvertFrom-Json '"\u6279\u91cf\u4fdd\u5b58"')) {
+                Add-Failure "Family file saver feature displayName must match the manifest display name"
+            }
+            if ($feature.commandType -ne "PlugHub.FamilyFileSaver.SaveFamilyFilesCommand") {
+                Add-Failure "Family file saver commandType must be PlugHub.FamilyFileSaver.SaveFamilyFilesCommand"
+            }
+            Require-FeatureIcon $feature "icons/family-file-saver.png"
         }
     }
 }
@@ -299,10 +482,58 @@ Require-Text "src\PlugHub.ReferencePlaneVisibility\ToggleReferencePlaneVisibilit
 Reject-Text "src\PlugHub.ReferencePlaneVisibility\ToggleReferencePlaneVisibilityCommand.cs" "TaskDialog.Show" "Reference plane visibility success popup"
 Require-Text "build.ps1" "src\PlugHub.ReferencePlaneVisibility\PlugHub.ReferencePlaneVisibility.csproj" "Reference plane visibility project build registration"
 Require-Text "PlugHub_Packages.slnx" "src/PlugHub.ReferencePlaneVisibility/PlugHub.ReferencePlaneVisibility.csproj" "Reference plane visibility solution registration"
+
+Require-File "src\PlugHub.FamilyFileSaver\PlugHub.FamilyFileSaver.csproj"
+Require-File "src\PlugHub.FamilyFileSaver\FamilyFileSaverModule.cs"
+Require-File "src\PlugHub.FamilyFileSaver\FamilyItem.cs"
+Require-File "src\PlugHub.FamilyFileSaver\FamilySelectionWindow.xaml"
+Require-File "src\PlugHub.FamilyFileSaver\FamilySelectionWindow.xaml.cs"
+Require-File "src\PlugHub.FamilyFileSaver\SaveFamilyFilesCommand.cs"
+Require-Text "src\PlugHub.FamilyFileSaver\SaveFamilyFilesCommand.cs" "EditFamily" "Family edit API"
+Require-Text "src\PlugHub.FamilyFileSaver\SaveFamilyFilesCommand.cs" "SaveAs" "Family save API"
+Require-Text "src\PlugHub.FamilyFileSaver\SaveFamilyFilesCommand.cs" "FolderBrowserDialog" "Family save destination selector"
+Require-Text "src\PlugHub.FamilyFileSaver\SaveFamilyFilesCommand.cs" "DialogBoxShowing" "Family saver background dialog suppression"
+Require-Text "src\PlugHub.FamilyFileSaver\SaveFamilyFilesCommand.cs" "OverrideResult" "Family saver dialog auto-dismiss result"
+Require-Text "src\PlugHub.FamilyFileSaver\FamilySelectionWindow.xaml.cs" "_selectedFamilyIds" "Family saver persistent selection state"
+Require-Text "src\PlugHub.FamilyFileSaver\FamilySelectionWindow.xaml.cs" "CaptureCurrentSelections" "Family saver filter selection persistence"
+Require-Text "build.ps1" "src\PlugHub.FamilyFileSaver\PlugHub.FamilyFileSaver.csproj" "Family file saver project build registration"
+Require-Text "PlugHub_Packages.slnx" "src/PlugHub.FamilyFileSaver/PlugHub.FamilyFileSaver.csproj" "Family file saver solution registration"
+
+Require-File "src\PlugHub.MepTypeFilterVisibility\PlugHub.MepTypeFilterVisibility.csproj"
+Require-File "src\PlugHub.MepTypeFilterVisibility\MepTypeFilterVisibilityModule.cs"
+Require-File "src\PlugHub.MepTypeFilterVisibility\ApplyMepTypeFilterVisibilityCommand.cs"
+Require-Text "src\PlugHub.MepTypeFilterVisibility\ApplyMepTypeFilterVisibilityCommand.cs" "PickElementsByRectangle" "MEP type filter rectangle selection prompt"
+Require-Text "src\PlugHub.MepTypeFilterVisibility\ApplyMepTypeFilterVisibilityCommand.cs" "BuiltInCategory.OST_DuctCurves" "MEP type filter duct category"
+Require-Text "src\PlugHub.MepTypeFilterVisibility\ApplyMepTypeFilterVisibilityCommand.cs" "BuiltInCategory.OST_DuctFitting" "MEP type filter duct fitting category"
+Require-Text "src\PlugHub.MepTypeFilterVisibility\ApplyMepTypeFilterVisibilityCommand.cs" "BuiltInCategory.OST_DuctAccessory" "MEP type filter duct accessory category"
+Require-Text "src\PlugHub.MepTypeFilterVisibility\ApplyMepTypeFilterVisibilityCommand.cs" "BuiltInCategory.OST_DuctTerminal" "MEP type filter duct terminal category"
+Require-Text "src\PlugHub.MepTypeFilterVisibility\ApplyMepTypeFilterVisibilityCommand.cs" "BuiltInCategory.OST_PipeCurves" "MEP type filter pipe category"
+Require-Text "src\PlugHub.MepTypeFilterVisibility\ApplyMepTypeFilterVisibilityCommand.cs" "BuiltInCategory.OST_PipeFitting" "MEP type filter pipe fitting category"
+Require-Text "src\PlugHub.MepTypeFilterVisibility\ApplyMepTypeFilterVisibilityCommand.cs" "BuiltInCategory.OST_PipeAccessory" "MEP type filter pipe accessory category"
+Require-Text "src\PlugHub.MepTypeFilterVisibility\ApplyMepTypeFilterVisibilityCommand.cs" "BuiltInCategory.OST_CableTray" "MEP type filter cable tray category"
+Require-Text "src\PlugHub.MepTypeFilterVisibility\ApplyMepTypeFilterVisibilityCommand.cs" "BuiltInCategory.OST_CableTrayFitting" "MEP type filter cable tray fitting category"
+Require-Text "src\PlugHub.MepTypeFilterVisibility\ApplyMepTypeFilterVisibilityCommand.cs" "BuiltInParameter.RBS_DUCT_SYSTEM_TYPE_PARAM" "MEP type filter duct system type rule"
+Require-Text "src\PlugHub.MepTypeFilterVisibility\ApplyMepTypeFilterVisibilityCommand.cs" "BuiltInParameter.RBS_PIPING_SYSTEM_TYPE_PARAM" "MEP type filter pipe system type rule"
+Require-Text "src\PlugHub.MepTypeFilterVisibility\ApplyMepTypeFilterVisibilityCommand.cs" "BuiltInParameter.RBS_CTC_SERVICE_TYPE" "MEP type filter cable tray service type rule"
+Reject-Text "src\PlugHub.MepTypeFilterVisibility\ApplyMepTypeFilterVisibilityCommand.cs" "BuiltInParameter.RBS_CABLETRAYCONDUIT_SYSTEM_TYPE" "MEP type filter cable tray system type rule"
+Require-Text "src\PlugHub.MepTypeFilterVisibility\ApplyMepTypeFilterVisibilityCommand.cs" "ParameterFilterElement.Create" "MEP type filter creation API"
+Require-Text "src\PlugHub.MepTypeFilterVisibility\ApplyMepTypeFilterVisibilityCommand.cs" "SetFilterVisibility" "MEP type filter view visibility API"
+Require-Text "src\PlugHub.MepTypeFilterVisibility\ApplyMepTypeFilterVisibilityCommand.cs" "ShouldRestoreAllFilterVisibility" "MEP type filter restore-all toggle check"
+Require-Text "src\PlugHub.MepTypeFilterVisibility\ApplyMepTypeFilterVisibilityCommand.cs" "RestoreAllFilterVisibility" "MEP type filter restore-all visibility path"
+Require-Text "src\PlugHub.MepTypeFilterVisibility\ApplyMepTypeFilterVisibilityCommand.cs" "GetFilterVisibility" "MEP type filter current visibility read"
+Require-Text "src\PlugHub.MepTypeFilterVisibility\ApplyMepTypeFilterVisibilityCommand.cs" "FindParameterFilterByTypeName" "MEP type filter prefixed filter name lookup"
+Require-Text "src\PlugHub.MepTypeFilterVisibility\ApplyMepTypeFilterVisibilityCommand.cs" "IsFilterNameMatch" "MEP type filter name suffix match helper"
+Require-Text "src\PlugHub.MepTypeFilterVisibility\ApplyMepTypeFilterVisibilityCommand.cs" "EndsWith(typeFilterName, StringComparison.Ordinal)" "MEP type filter prefixed name suffix comparison"
+Require-Text "build.ps1" "src\PlugHub.MepTypeFilterVisibility\PlugHub.MepTypeFilterVisibility.csproj" "MEP type filter visibility project build registration"
+Require-Text "PlugHub_Packages.slnx" "src/PlugHub.MepTypeFilterVisibility/PlugHub.MepTypeFilterVisibility.csproj" "MEP type filter visibility solution registration"
 Reject-Text "packages.json" "builtin:" "Built-in icon reference"
 Reject-Text "packages.json" "Tee/Tap" "Duct preferred junction old Tee/Tap wording"
 Require-Text ".github\workflows\build-package.yml" '$indexVersionPattern = [regex]::new(' "Root indexVersion replacement regex instance"
 Require-Text ".github\workflows\build-package.yml" '$manifestText = $indexVersionPattern.Replace($manifestText, (' "Root indexVersion replacement count-limited call"
+Require-Text ".github\workflows\build-package.yml" 'refs/heads/codex' "Codex branch workflow registration"
+Require-Text ".github\workflows\build-package.yml" 'refs/heads/hermes' "Hermes branch workflow registration"
+Require-Text ".github\workflows\build-package.yml" 'origin/$githubRefName:refs/heads/$githubRefName' "Gitee working branch mirror refspec"
+Require-Text ".github\workflows\build-package.yml" 'Sync Gitee release asset' "Gitee release asset sync step"
 
 if ($failures.Count -gt 0) {
     $failures | ForEach-Object { Write-Host "ERROR: $_" }

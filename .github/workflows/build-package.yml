@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - main
+      - codex
+      - hermes
     tags:
       - "V*"
   pull_request:
@@ -49,7 +51,7 @@ jobs:
 
       - name: Resolve package version
         id: version
-        if: github.event_name != 'pull_request' && github.actor != 'github-actions[bot]'
+        if: github.event_name != 'pull_request' && github.actor != 'github-actions[bot]' && (github.ref_type == 'tag' || github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch')
         shell: pwsh
         working-directory: PlugHub_Packages
         run: |
@@ -166,7 +168,7 @@ jobs:
             PlugHub_Packages/icons/*.png
 
       - name: Package release zip
-        if: github.event_name != 'pull_request' && github.actor != 'github-actions[bot]'
+        if: github.event_name != 'pull_request' && github.actor != 'github-actions[bot]' && (github.ref_type == 'tag' || github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch')
         shell: pwsh
         working-directory: PlugHub_Packages
         run: |
@@ -183,7 +185,7 @@ jobs:
           Compress-Archive -Path $packageRoot -DestinationPath $env:PACKAGE_ZIP -Force
 
       - name: Commit package outputs
-        if: github.actor != 'github-actions[bot]' && github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+        if: github.actor != 'github-actions[bot]' && ((github.event_name == 'push' && contains(fromJson('["refs/heads/main","refs/heads/codex","refs/heads/hermes"]'), github.ref)) || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'))
         shell: pwsh
         working-directory: PlugHub_Packages
         run: |
@@ -192,12 +194,18 @@ jobs:
           git add packages.json dist/*.dll icons/*.png
 
           if ((git status --porcelain) -ne "") {
-            git commit -m "chore: update package build $env:PACKAGE_VERSION_TAG"
+            $commitMessage = if ([string]::IsNullOrWhiteSpace($env:PACKAGE_VERSION_TAG)) {
+              "chore: update package build for $env:GITHUB_REF_NAME"
+            } else {
+              "chore: update package build $env:PACKAGE_VERSION_TAG"
+            }
+
+            git commit -m $commitMessage
             git push
           }
 
       - name: Publish GitHub release
-        if: github.event_name != 'pull_request' && github.actor != 'github-actions[bot]'
+        if: github.event_name != 'pull_request' && github.actor != 'github-actions[bot]' && (github.ref_type == 'tag' || github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch')
         shell: pwsh
         working-directory: PlugHub_Packages
         env:
@@ -239,7 +247,7 @@ jobs:
   mirror-gitee:
     name: Mirror final refs and release to Gitee
     needs: build
-    if: github.event_name != 'pull_request' && github.actor != 'github-actions[bot]' && needs.build.outputs.version_tag != ''
+    if: github.event_name != 'pull_request' && github.actor != 'github-actions[bot]' && ((github.event_name == 'push' && contains(fromJson('["refs/heads/main","refs/heads/codex","refs/heads/hermes"]'), github.ref)) || (needs.build.outputs.version_tag != '' && (github.ref_type == 'tag' || github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch')))
     runs-on: ubuntu-latest
 
     steps:
@@ -252,11 +260,15 @@ jobs:
         run: |
           set -euo pipefail
 
-          git fetch origin +refs/heads/main:refs/remotes/origin/main --tags --force
           version_tag="${{ needs.build.outputs.version_tag }}"
-          if [ "${GITHUB_REF}" = "refs/heads/main" ]; then
-            git checkout -B main origin/main
+          githubRefType="${{ github.ref_type }}"
+          githubRefName="${{ github.ref_name }}"
+
+          if [ "$githubRefType" = "branch" ]; then
+            git fetch origin "+refs/heads/$githubRefName:refs/remotes/origin/$githubRefName" --tags --force
+            git checkout -B "$githubRefName" "origin/$githubRefName"
           else
+            git fetch origin --tags --force
             git checkout --detach "refs/tags/$version_tag"
           fi
 
@@ -295,8 +307,11 @@ jobs:
           git remote add gitee git@gitee.com:GaoMengGu/PlugHub_Packages.git
 
           version_tag="${{ needs.build.outputs.version_tag }}"
-          if [ "${GITHUB_REF}" = "refs/heads/main" ]; then
-            git push --force gitee origin/main:refs/heads/main
+          githubRefType="${{ github.ref_type }}"
+          githubRefName="${{ github.ref_name }}"
+
+          if [ "$githubRefType" = "branch" ]; then
+            git push --force gitee "origin/$githubRefName:refs/heads/$githubRefName"
           fi
 
           if [ -n "$version_tag" ] && git rev-parse -q --verify "refs/tags/$version_tag" >/dev/null; then
@@ -304,6 +319,7 @@ jobs:
           fi
 
       - name: Sync Gitee release asset
+        if: needs.build.outputs.version_tag != '' && (github.ref_type == 'tag' || github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch')
         env:
           GH_TOKEN: ${{ github.token }}
           GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}

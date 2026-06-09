@@ -8,7 +8,7 @@
   "modules": [
     {
       "id": "plughub.modules.grid-visibility",
-      "version": "V1.0.2",
+      "version": "V1.0.4",
       "author": "GAOMENGGU",
       "displayName": "视图工具",
       "description": "当前视图轴网显示控制工具。",
@@ -23,7 +23,7 @@
       "features": [
         {
           "id": "plughub.modules.grid-visibility.toggle",
-          "displayName": "轴网显隐切换",
+          "displayName": "轴网显隐",
           "description": "在当前视图中切换轴网类别的可见性。",
           "iconPath": "icons/grid-visibility.png",
           "commandType": "PlugHub.GridVisibility.ToggleGridVisibilityCommand"
@@ -32,7 +32,7 @@
     },
     {
       "id": "plughub.modules.level-visibility",
-      "version": "V1.0.2",
+      "version": "V1.0.4",
       "author": "GAOMENGGU",
       "displayName": "视图工具",
       "description": "当前视图标高显示控制工具。",
@@ -47,7 +47,7 @@
       "features": [
         {
           "id": "plughub.modules.level-visibility.toggle",
-          "displayName": "标高显隐切换",
+          "displayName": "标高显隐",
           "description": "在当前视图中切换标高类别的可见性。",
           "iconPath": "icons/level-visibility.png",
           "commandType": "PlugHub.LevelVisibility.ToggleLevelVisibilityCommand"
@@ -56,7 +56,7 @@
     },
     {
       "id": "plughub.modules.reference-plane-visibility",
-      "version": "V1.0.2",
+      "version": "V1.0.4",
       "author": "GAOMENGGU",
       "displayName": "视图工具",
       "description": "当前视图参照平面显示控制工具。",
@@ -71,7 +71,7 @@
       "features": [
         {
           "id": "plughub.modules.reference-plane-visibility.toggle",
-          "displayName": "参照平面显隐切换",
+          "displayName": "参照平面显隐",
           "description": "在当前视图中切换参照平面类别的可见性。",
           "iconPath": "icons/reference-plane-visibility.png",
           "commandType": "PlugHub.ReferencePlaneVisibility.ToggleReferencePlaneVisibilityCommand"
@@ -82,7 +82,7 @@
       "id": "plughub.modules.duct-preferred-junction",
       "version": "V1.0.2",
       "author": "GAOMENGGU",
-      "displayName": "机电风管",
+      "displayName": "机电工具",
       "description": "风管连接偏好工具。",
       "assembly": "dist/PlugHub.DuctPreferredJunction.dll",
       "category": "mep",
@@ -103,9 +103,9 @@
     },
     {
       "id": "plughub.modules.family-material-parameters",
-      "version": "V1.0.2",
+      "version": "V1.0.3",
       "author": "GAOMENGGU",
-      "displayName": "族批处理",
+      "displayName": "族工具",
       "description": "族文件材质参数批处理工具。",
       "assembly": "dist/PlugHub.FamilyMaterialParameters.dll",
       "category": "family",
@@ -117,10 +117,61 @@
       "features": [
         {
           "id": "plughub.modules.family-material-parameters.batch-add-material",
-          "displayName": "批量材质参数",
+          "displayName": "批量材质",
           "description": "批量打开族文件，添加材质参数并关联实体材质参数。",
           "iconPath": "icons/family-material-parameters.png",
           "commandType": "PlugHub.FamilyMaterialParameters.BatchAddMaterialParameterCommand"
+        }
+      ]
+    },
+    {
+      "id": "plughub.modules.family-file-saver",
+      "version": "V1.0.2",
+      "author": "GAOMENGGU",
+      "displayName": "族工具",
+      "description": "读取当前项目所有族，筛选后批量保存到指定文件夹。",
+      "assembly": "dist/PlugHub.FamilyFileSaver.dll",
+      "category": "family",
+      "tags": [
+        "family",
+        "save",
+        "export",
+        "revit-api"
+      ],
+      "features": [
+        {
+          "id": "plughub.modules.family-file-saver.save",
+          "displayName": "批量保存",
+          "description": "读取当前项目所有族，排除系统族，弹出选择窗口批量保存到指定文件夹。",
+          "iconPath": "icons/family-file-saver.png",
+          "commandType": "PlugHub.FamilyFileSaver.SaveFamilyFilesCommand"
+        }
+      ]
+    },
+    {
+      "id": "plughub.modules.mep-type-filter-visibility",
+      "version": "V1.0.2",
+      "author": "GAOMENGGU",
+      "displayName": "机电工具",
+      "description": "按选中风管、管道或桥架类型控制当前视图过滤器显示。",
+      "assembly": "dist/PlugHub.MepTypeFilterVisibility.dll",
+      "category": "mep",
+      "tags": [
+        "mep",
+        "duct",
+        "pipe",
+        "cable-tray",
+        "filter",
+        "visibility",
+        "revit-api"
+      ],
+      "features": [
+        {
+          "id": "plughub.modules.mep-type-filter-visibility.apply",
+          "displayName": "机电过滤",
+          "description": "框选风管、管道或桥架后，按系统类型或设备类型创建并切换当前视图过滤器。",
+          "iconPath": "icons/mep-type-filter-visibility.png",
+          "commandType": "PlugHub.MepTypeFilterVisibility.ApplyMepTypeFilterVisibilityCommand"
         }
       ]
     }

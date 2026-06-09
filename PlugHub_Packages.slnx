@@ -1,7 +1,9 @@
 <Solution>
   <Project Path="src/PlugHub.DuctPreferredJunction/PlugHub.DuctPreferredJunction.csproj" />
   <Project Path="src/PlugHub.FamilyMaterialParameters/PlugHub.FamilyMaterialParameters.csproj" />
+  <Project Path="src/PlugHub.FamilyFileSaver/PlugHub.FamilyFileSaver.csproj" />
   <Project Path="src/PlugHub.GridVisibility/PlugHub.GridVisibility.csproj" />
   <Project Path="src/PlugHub.LevelVisibility/PlugHub.LevelVisibility.csproj" />
+  <Project Path="src/PlugHub.MepTypeFilterVisibility/PlugHub.MepTypeFilterVisibility.csproj" />
   <Project Path="src/PlugHub.ReferencePlaneVisibility/PlugHub.ReferencePlaneVisibility.csproj" />
 </Solution>
