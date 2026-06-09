@@ -185,7 +185,7 @@ jobs:
           Compress-Archive -Path $packageRoot -DestinationPath $env:PACKAGE_ZIP -Force
 
       - name: Commit package outputs
-        if: github.actor != 'github-actions[bot]' && ((github.event_name == 'push' && contains(fromJson('["refs/heads/main","refs/heads/codex","refs/heads/hermes"]'), github.ref)) || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'))
+        if: github.actor != 'github-actions[bot]' && github.event_name == 'push' && contains(fromJson('["refs/heads/codex","refs/heads/hermes"]'), github.ref)
         shell: pwsh
         working-directory: PlugHub_Packages
         run: |
