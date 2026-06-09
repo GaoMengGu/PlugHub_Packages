@@ -22,7 +22,7 @@ namespace PlugHub.GridVisibility
                     {
                         Id = "plughub.modules.grid-visibility.toggle",
                         ModuleId = "plughub.modules.grid-visibility",
-                        Name = "轴网显隐切换",
+                        Name = "显隐",
                         Description = "在当前视图中切换轴网类别的可见性。",
                         Category = "view",
                         Group = "视图工具",

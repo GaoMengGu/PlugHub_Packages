@@ -22,7 +22,7 @@ namespace PlugHub.MepTypeFilterVisibility
                     {
                         Id = "plughub.modules.mep-type-filter-visibility.apply",
                         ModuleId = "plughub.modules.mep-type-filter-visibility",
-                        Name = "机电类型过滤显示",
+                        Name = "机电过滤",
                         Description = "框选风管、管道或桥架后，按系统类型或设备类型创建并切换当前视图过滤器。",
                         Category = "mep",
                         Group = "机电工具",

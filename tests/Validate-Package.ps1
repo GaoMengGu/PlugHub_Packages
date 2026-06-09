@@ -315,7 +315,7 @@ else {
             Add-Failure "Missing grid visibility toggle feature in packages.json"
         }
         else {
-            if ($feature.displayName -ne (ConvertFrom-Json '"\u8f74\u7f51\u663e\u9690\u5207\u6362"')) {
+            if ($feature.displayName -ne (ConvertFrom-Json '"\u663e\u9690"')) {
                 Add-Failure "Grid visibility feature displayName must match the manifest display name"
             }
             if ($feature.commandType -ne "PlugHub.GridVisibility.ToggleGridVisibilityCommand") {
@@ -339,7 +339,7 @@ else {
             Add-Failure "Missing level visibility toggle feature in packages.json"
         }
         else {
-            if ($feature.displayName -ne (ConvertFrom-Json '"\u6807\u9ad8\u663e\u9690\u5207\u6362"')) {
+            if ($feature.displayName -ne (ConvertFrom-Json '"\u663e\u9690"')) {
                 Add-Failure "Level visibility feature displayName must match the manifest display name"
             }
             if ($feature.commandType -ne "PlugHub.LevelVisibility.ToggleLevelVisibilityCommand") {
@@ -363,7 +363,7 @@ else {
             Add-Failure "Missing reference plane visibility toggle feature in packages.json"
         }
         else {
-            if ($feature.displayName -ne (ConvertFrom-Json '"\u53c2\u7167\u5e73\u9762\u663e\u9690\u5207\u6362"')) {
+            if ($feature.displayName -ne (ConvertFrom-Json '"\u663e\u9690"')) {
                 Add-Failure "Reference plane visibility feature displayName must match the manifest display name"
             }
             if ($feature.commandType -ne "PlugHub.ReferencePlaneVisibility.ToggleReferencePlaneVisibilityCommand") {
@@ -401,7 +401,7 @@ else {
             Add-Failure "Missing MEP type filter visibility feature in packages.json"
         }
         else {
-            if ($feature.displayName -ne (ConvertFrom-Json '"\u673a\u7535\u7c7b\u578b\u8fc7\u6ee4\u663e\u793a"')) {
+            if ($feature.displayName -ne (ConvertFrom-Json '"\u673a\u7535\u8fc7\u6ee4"')) {
                 Add-Failure "MEP type filter visibility feature displayName must match the manifest display name"
             }
             if ($feature.commandType -ne "PlugHub.MepTypeFilterVisibility.ApplyMepTypeFilterVisibilityCommand") {
@@ -421,6 +421,9 @@ else {
             Add-Failure "Missing family material parameters feature in packages.json"
         }
         else {
+            if ($feature.displayName -ne (ConvertFrom-Json '"\u6279\u91cf\u6750\u8d28"')) {
+                Add-Failure "Family material parameters feature displayName must match the manifest display name"
+            }
             Require-FeatureIcon $feature "icons/family-material-parameters.png"
         }
     }
@@ -439,6 +442,9 @@ else {
             Add-Failure "Missing family file saver feature in packages.json"
         }
         else {
+            if ($feature.displayName -ne (ConvertFrom-Json '"\u6279\u91cf\u4fdd\u5b58"')) {
+                Add-Failure "Family file saver feature displayName must match the manifest display name"
+            }
             if ($feature.commandType -ne "PlugHub.FamilyFileSaver.SaveFamilyFilesCommand") {
                 Add-Failure "Family file saver commandType must be PlugHub.FamilyFileSaver.SaveFamilyFilesCommand"
             }
@@ -508,9 +514,13 @@ Require-Text "src\PlugHub.MepTypeFilterVisibility\ApplyMepTypeFilterVisibilityCo
 Require-Text "src\PlugHub.MepTypeFilterVisibility\ApplyMepTypeFilterVisibilityCommand.cs" "BuiltInCategory.OST_CableTrayFitting" "MEP type filter cable tray fitting category"
 Require-Text "src\PlugHub.MepTypeFilterVisibility\ApplyMepTypeFilterVisibilityCommand.cs" "BuiltInParameter.RBS_DUCT_SYSTEM_TYPE_PARAM" "MEP type filter duct system type rule"
 Require-Text "src\PlugHub.MepTypeFilterVisibility\ApplyMepTypeFilterVisibilityCommand.cs" "BuiltInParameter.RBS_PIPING_SYSTEM_TYPE_PARAM" "MEP type filter pipe system type rule"
-Require-Text "src\PlugHub.MepTypeFilterVisibility\ApplyMepTypeFilterVisibilityCommand.cs" "BuiltInParameter.RBS_CABLETRAYCONDUIT_SYSTEM_TYPE" "MEP type filter cable tray service type rule"
+Require-Text "src\PlugHub.MepTypeFilterVisibility\ApplyMepTypeFilterVisibilityCommand.cs" "BuiltInParameter.RBS_CTC_SERVICE_TYPE" "MEP type filter cable tray service type rule"
+Reject-Text "src\PlugHub.MepTypeFilterVisibility\ApplyMepTypeFilterVisibilityCommand.cs" "BuiltInParameter.RBS_CABLETRAYCONDUIT_SYSTEM_TYPE" "MEP type filter cable tray system type rule"
 Require-Text "src\PlugHub.MepTypeFilterVisibility\ApplyMepTypeFilterVisibilityCommand.cs" "ParameterFilterElement.Create" "MEP type filter creation API"
 Require-Text "src\PlugHub.MepTypeFilterVisibility\ApplyMepTypeFilterVisibilityCommand.cs" "SetFilterVisibility" "MEP type filter view visibility API"
+Require-Text "src\PlugHub.MepTypeFilterVisibility\ApplyMepTypeFilterVisibilityCommand.cs" "ShouldRestoreAllFilterVisibility" "MEP type filter restore-all toggle check"
+Require-Text "src\PlugHub.MepTypeFilterVisibility\ApplyMepTypeFilterVisibilityCommand.cs" "RestoreAllFilterVisibility" "MEP type filter restore-all visibility path"
+Require-Text "src\PlugHub.MepTypeFilterVisibility\ApplyMepTypeFilterVisibilityCommand.cs" "GetFilterVisibility" "MEP type filter current visibility read"
 Require-Text "build.ps1" "src\PlugHub.MepTypeFilterVisibility\PlugHub.MepTypeFilterVisibility.csproj" "MEP type filter visibility project build registration"
 Require-Text "PlugHub_Packages.slnx" "src/PlugHub.MepTypeFilterVisibility/PlugHub.MepTypeFilterVisibility.csproj" "MEP type filter visibility solution registration"
 Reject-Text "packages.json" "builtin:" "Built-in icon reference"

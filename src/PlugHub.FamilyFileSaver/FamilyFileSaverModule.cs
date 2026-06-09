@@ -22,7 +22,7 @@ namespace PlugHub.FamilyFileSaver
                     {
                         Id = "plughub.modules.family-file-saver.save",
                         ModuleId = "plughub.modules.family-file-saver",
-                        Name = "保存族文件",
+                        Name = "批量保存",
                         Description = "读取当前项目所有族，排除系统族，弹出选择窗口批量保存到指定文件夹。",
                         Category = "family",
                         Group = "族工具",

@@ -22,7 +22,7 @@ namespace PlugHub.FamilyMaterialParameters
                     {
                         Id = "plughub.modules.family-material-parameters.batch-add-material",
                         ModuleId = "plughub.modules.family-material-parameters",
-                        Name = "批量材质参数",
+                        Name = "批量材质",
                         Description = "批量打开族文件，添加材质参数并关联实体材质参数。",
                         Category = "family",
                         Group = "族工具",

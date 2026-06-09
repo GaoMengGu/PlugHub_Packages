@@ -22,7 +22,7 @@ namespace PlugHub.ReferencePlaneVisibility
                     {
                         Id = "plughub.modules.reference-plane-visibility.toggle",
                         ModuleId = "plughub.modules.reference-plane-visibility",
-                        Name = "参照平面显隐切换",
+                        Name = "显隐",
                         Description = "在当前视图中切换参照平面类别的可见性。",
                         Category = "view",
                         Group = "视图工具",

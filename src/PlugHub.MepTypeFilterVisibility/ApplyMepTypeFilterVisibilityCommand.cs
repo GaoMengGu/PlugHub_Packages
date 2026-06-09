@@ -34,7 +34,7 @@ namespace PlugHub.MepTypeFilterVisibility
                 }),
             new FilterKind(
                 "cable-tray",
-                BuiltInParameter.RBS_CABLETRAYCONDUIT_SYSTEM_TYPE,
+                BuiltInParameter.RBS_CTC_SERVICE_TYPE,
                 new[]
                 {
                     BuiltInCategory.OST_CableTray,
@@ -281,7 +281,7 @@ namespace PlugHub.MepTypeFilterVisibility
         private static void ApplyFilterVisibility(Document document, View view, IReadOnlyCollection<SelectedFilterTarget> targets)
         {
             var parameterFilters = CollectParameterFiltersByName(document);
-            var visibleFilterIds = new HashSet<int>();
+            var targetFilterIds = new List<ElementId>();
 
             foreach (var targetGroup in targets.GroupBy(target => target.FilterName, StringComparer.Ordinal))
             {
@@ -291,8 +291,21 @@ namespace PlugHub.MepTypeFilterVisibility
                     parameterFilters[targetGroup.Key] = filter;
                 }
 
-                visibleFilterIds.Add(filter.Id.IntegerValue);
-                view.SetFilterVisibility(filter.Id, true);
+                targetFilterIds.Add(filter.Id);
+            }
+
+            var viewFilterIds = view.GetFilters().ToList();
+            if (ShouldRestoreAllFilterVisibility(view, viewFilterIds, targetFilterIds))
+            {
+                RestoreAllFilterVisibility(view, viewFilterIds);
+                return;
+            }
+
+            var visibleFilterIds = new HashSet<int>();
+            foreach (var filterId in targetFilterIds)
+            {
+                visibleFilterIds.Add(filterId.IntegerValue);
+                view.SetFilterVisibility(filterId, true);
             }
 
             foreach (var filterId in view.GetFilters().ToList())
@@ -301,6 +314,52 @@ namespace PlugHub.MepTypeFilterVisibility
                 {
                     view.SetFilterVisibility(filterId, false);
                 }
+            }
+        }
+
+        private static bool ShouldRestoreAllFilterVisibility(
+            View view,
+            IReadOnlyCollection<ElementId> viewFilterIds,
+            IReadOnlyCollection<ElementId> targetFilterIds)
+        {
+            if (viewFilterIds.Count == 0 || targetFilterIds.Count == 0)
+            {
+                return false;
+            }
+
+            var viewFilterIdValues = new HashSet<int>(viewFilterIds.Select(filterId => filterId.IntegerValue));
+            var targetFilterIdValues = new HashSet<int>(targetFilterIds.Select(filterId => filterId.IntegerValue));
+            foreach (var targetFilterId in targetFilterIds)
+            {
+                if (!viewFilterIdValues.Contains(targetFilterId.IntegerValue) || !view.GetFilterVisibility(targetFilterId))
+                {
+                    return false;
+                }
+            }
+
+            var hasVisibleFilter = false;
+            foreach (var viewFilterId in viewFilterIds)
+            {
+                if (!view.GetFilterVisibility(viewFilterId))
+                {
+                    continue;
+                }
+
+                hasVisibleFilter = true;
+                if (!targetFilterIdValues.Contains(viewFilterId.IntegerValue))
+                {
+                    return false;
+                }
+            }
+
+            return hasVisibleFilter;
+        }
+
+        private static void RestoreAllFilterVisibility(View view, IEnumerable<ElementId> filterIds)
+        {
+            foreach (var filterId in filterIds)
+            {
+                view.SetFilterVisibility(filterId, true);
             }
         }
 

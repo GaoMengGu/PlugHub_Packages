@@ -132,7 +132,7 @@ packages/dropins/
 
 - 根 `indexVersion` 必须使用 `V<major>.<minor>.<patch>`，由发布 workflow 在普通发布时自动递增；它只表示仓库索引和 Release 快照。
 - `module.id` 和 `feature.id` 必须全局唯一。
-- `module.version` 必须使用 `V<major>.<minor>.<patch>`。只在该模块实际变更时递增；仓库页展示和更新判断使用该字段。
+- `module.version` 必须使用 `V<major>.<minor>.<patch>`。只在该模块实际变更时递增；仓库页展示和更新判断使用该字段。修 bug、改 Ribbon 名称或调整模块元数据递增 patch；新增兼容功能递增 minor；不兼容改动才递增 major。一次提交改到多个模块时，只递增实际变更的那些模块。
 - `module.author` 当前统一写 `GAOMENGGU`；框架只保留该元数据，暂不参与调用。
 - `module.displayName` 只用于一级工具分类，统一按业务归类：族相关为 `族工具`；土建相关为 `土建工具`；机电相关为 `机电工具`；出图/注释相关为 `出图工具`；管线综合调整相关为 `管综工具`；视图相关为 `视图工具`；无法归入上述业务面的统一为 `小工具`。新增模块优先按这个规则设置清单 `displayName`，并同步模块描述类的 `Name` 和功能 `Group`。
 - `module.assembly` 指向命令 DLL。相对路径按插件包清单所在目录解析。
