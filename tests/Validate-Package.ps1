@@ -315,7 +315,7 @@ else {
             Add-Failure "Missing grid visibility toggle feature in packages.json"
         }
         else {
-            if ($feature.displayName -ne (ConvertFrom-Json '"\u663e\u9690"')) {
+            if ($feature.displayName -ne (ConvertFrom-Json '"\u8f74\u7f51\u663e\u9690"')) {
                 Add-Failure "Grid visibility feature displayName must match the manifest display name"
             }
             if ($feature.commandType -ne "PlugHub.GridVisibility.ToggleGridVisibilityCommand") {
@@ -339,7 +339,7 @@ else {
             Add-Failure "Missing level visibility toggle feature in packages.json"
         }
         else {
-            if ($feature.displayName -ne (ConvertFrom-Json '"\u663e\u9690"')) {
+            if ($feature.displayName -ne (ConvertFrom-Json '"\u6807\u9ad8\u663e\u9690"')) {
                 Add-Failure "Level visibility feature displayName must match the manifest display name"
             }
             if ($feature.commandType -ne "PlugHub.LevelVisibility.ToggleLevelVisibilityCommand") {
@@ -363,7 +363,7 @@ else {
             Add-Failure "Missing reference plane visibility toggle feature in packages.json"
         }
         else {
-            if ($feature.displayName -ne (ConvertFrom-Json '"\u663e\u9690"')) {
+            if ($feature.displayName -ne (ConvertFrom-Json '"\u53c2\u7167\u5e73\u9762\u663e\u9690"')) {
                 Add-Failure "Reference plane visibility feature displayName must match the manifest display name"
             }
             if ($feature.commandType -ne "PlugHub.ReferencePlaneVisibility.ToggleReferencePlaneVisibilityCommand") {
@@ -521,6 +521,9 @@ Require-Text "src\PlugHub.MepTypeFilterVisibility\ApplyMepTypeFilterVisibilityCo
 Require-Text "src\PlugHub.MepTypeFilterVisibility\ApplyMepTypeFilterVisibilityCommand.cs" "ShouldRestoreAllFilterVisibility" "MEP type filter restore-all toggle check"
 Require-Text "src\PlugHub.MepTypeFilterVisibility\ApplyMepTypeFilterVisibilityCommand.cs" "RestoreAllFilterVisibility" "MEP type filter restore-all visibility path"
 Require-Text "src\PlugHub.MepTypeFilterVisibility\ApplyMepTypeFilterVisibilityCommand.cs" "GetFilterVisibility" "MEP type filter current visibility read"
+Require-Text "src\PlugHub.MepTypeFilterVisibility\ApplyMepTypeFilterVisibilityCommand.cs" "FindParameterFilterByTypeName" "MEP type filter prefixed filter name lookup"
+Require-Text "src\PlugHub.MepTypeFilterVisibility\ApplyMepTypeFilterVisibilityCommand.cs" "IsFilterNameMatch" "MEP type filter name suffix match helper"
+Require-Text "src\PlugHub.MepTypeFilterVisibility\ApplyMepTypeFilterVisibilityCommand.cs" "EndsWith(typeFilterName, StringComparison.Ordinal)" "MEP type filter prefixed name suffix comparison"
 Require-Text "build.ps1" "src\PlugHub.MepTypeFilterVisibility\PlugHub.MepTypeFilterVisibility.csproj" "MEP type filter visibility project build registration"
 Require-Text "PlugHub_Packages.slnx" "src/PlugHub.MepTypeFilterVisibility/PlugHub.MepTypeFilterVisibility.csproj" "MEP type filter visibility solution registration"
 Reject-Text "packages.json" "builtin:" "Built-in icon reference"

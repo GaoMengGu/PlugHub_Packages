@@ -280,15 +280,16 @@ namespace PlugHub.MepTypeFilterVisibility
 
         private static void ApplyFilterVisibility(Document document, View view, IReadOnlyCollection<SelectedFilterTarget> targets)
         {
-            var parameterFilters = CollectParameterFiltersByName(document);
+            var parameterFilters = CollectParameterFilters(document);
             var targetFilterIds = new List<ElementId>();
 
             foreach (var targetGroup in targets.GroupBy(target => target.FilterName, StringComparer.Ordinal))
             {
-                if (!parameterFilters.TryGetValue(targetGroup.Key, out var filter))
+                var filter = FindParameterFilterByTypeName(parameterFilters, targetGroup.Key);
+                if (filter == null)
                 {
                     filter = CreateFilter(document, targetGroup.Key, targetGroup.ToList());
-                    parameterFilters[targetGroup.Key] = filter;
+                    parameterFilters.Add(filter);
                 }
 
                 targetFilterIds.Add(filter.Id);
@@ -363,13 +364,46 @@ namespace PlugHub.MepTypeFilterVisibility
             }
         }
 
-        private static Dictionary<string, ParameterFilterElement> CollectParameterFiltersByName(Document document)
+        private static List<ParameterFilterElement> CollectParameterFilters(Document document)
         {
             return new FilteredElementCollector(document)
                 .OfClass(typeof(ParameterFilterElement))
                 .Cast<ParameterFilterElement>()
-                .GroupBy(filter => filter.Name, StringComparer.Ordinal)
-                .ToDictionary(group => group.Key, group => group.First(), StringComparer.Ordinal);
+                .ToList();
+        }
+
+        private static ParameterFilterElement? FindParameterFilterByTypeName(
+            IEnumerable<ParameterFilterElement> parameterFilters,
+            string typeFilterName)
+        {
+            var normalizedTypeFilterName = NormalizeFilterName(typeFilterName);
+            return parameterFilters
+                .Select(filter => new
+                {
+                    Filter = filter,
+                    FilterName = NormalizeFilterName(filter.Name)
+                })
+                .Where(candidate => IsFilterNameMatch(candidate.FilterName, normalizedTypeFilterName))
+                .OrderBy(candidate => candidate.FilterName.Length)
+                .ThenBy(candidate => candidate.FilterName, StringComparer.Ordinal)
+                .Select(candidate => candidate.Filter)
+                .FirstOrDefault();
+        }
+
+        private static bool IsFilterNameMatch(string candidateFilterName, string typeFilterName)
+        {
+            if (string.IsNullOrWhiteSpace(candidateFilterName) || string.IsNullOrWhiteSpace(typeFilterName))
+            {
+                return false;
+            }
+
+            if (string.Equals(candidateFilterName, typeFilterName, StringComparison.Ordinal))
+            {
+                return true;
+            }
+
+            return candidateFilterName.Length > typeFilterName.Length
+                && candidateFilterName.EndsWith(typeFilterName, StringComparison.Ordinal);
         }
 
         private static ParameterFilterElement CreateFilter(Document document, string filterName, IReadOnlyCollection<SelectedFilterTarget> targets)

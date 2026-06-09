@@ -22,7 +22,7 @@ namespace PlugHub.LevelVisibility
                     {
                         Id = "plughub.modules.level-visibility.toggle",
                         ModuleId = "plughub.modules.level-visibility",
-                        Name = "显隐",
+                        Name = "标高显隐",
                         Description = "在当前视图中切换标高类别的可见性。",
                         Category = "view",
                         Group = "视图工具",
