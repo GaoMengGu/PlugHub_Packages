@@ -28,7 +28,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\revittool\src\PlugHubContracts\PlugHubContracts.csproj" />
+    <ProjectReference Include="..\..\..\revittool\src\PlugHub\Contracts\PlugHub.Contracts.csproj" />
   </ItemGroup>
 
   <Target Name="EnsureRevitApiReferenceMode" BeforeTargets="ResolveReferences">
