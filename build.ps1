@@ -46,6 +46,20 @@ if (!$UseRevitApiNuGet) {
 New-Item -ItemType Directory -Force -Path $OutputDir | Out-Null
 $OutputDir = (Resolve-Path $OutputDir).Path
 
+# Ensure PlugHub.Contracts is built first (dependency for all plugin projects)
+$contractsProject = Join-Path $Root "revittool\src\PlugHub\Contracts\PlugHub.Contracts.csproj"
+if (Test-Path $contractsProject) {
+    $contractsArgs = @("build", $contractsProject, "-c", $Configuration, "/p:RevitVersion=2020")
+    if ($UseRevitApiNuGet) {
+        $contractsArgs += "/p:RevitApiReferenceMode=NuGet"
+        if (![string]::IsNullOrWhiteSpace($RevitApiNuGetVersion)) {
+            $contractsArgs += "/p:RevitApiNuGetVersion=$RevitApiNuGetVersion"
+        }
+    }
+    & dotnet $contractsArgs
+    if ($LASTEXITCODE -ne 0) { throw "dotnet build failed for PlugHub.Contracts" }
+}
+
 foreach ($Project in $Projects) {
     $buildArguments = @(
         "build",
