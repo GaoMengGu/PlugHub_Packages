@@ -8,6 +8,8 @@
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
     <UseWPF>true</UseWPF>
     <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <NoWarn>CS8625;CS8600;CS8601;CS8602;CS8603;CS8604</NoWarn>
   </PropertyGroup>
 
   <ItemGroup Condition="'$(RevitApiReferenceMode)' == 'Installed'">
@@ -28,7 +30,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\revittool\src\PlugHub\Contracts\PlugHub.Contracts.csproj" />
+    <ProjectReference Include="..\..\..\revittool\src\PlugHub\Contracts\PlugHubContracts.csproj" />
   </ItemGroup>
 
   <Target Name="EnsureRevitApiReferenceMode" BeforeTargets="ResolveReferences">
