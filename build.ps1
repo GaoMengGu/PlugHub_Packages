@@ -9,14 +9,14 @@ param(
 $ErrorActionPreference = "Stop"
 $Root = (Resolve-Path $PSScriptRoot).Path
 $Projects = @(
-    (Join-Path $Root "src\\PlugHub.AutoSave\\PlugHub.AutoSave.csproj"),
     (Join-Path $Root "src\\PlugHub.DuctPreferredJunction\\PlugHub.DuctPreferredJunction.csproj"),
     (Join-Path $Root "src\\PlugHub.FamilyMaterialParameters\\PlugHub.FamilyMaterialParameters.csproj"),
     (Join-Path $Root "src\\PlugHub.FamilyFileSaver\\PlugHub.FamilyFileSaver.csproj"),
     (Join-Path $Root "src\\PlugHub.GridVisibility\\PlugHub.GridVisibility.csproj"),
     (Join-Path $Root "src\\PlugHub.LevelVisibility\\PlugHub.LevelVisibility.csproj"),
     (Join-Path $Root "src\\PlugHub.MepTypeFilterVisibility\\PlugHub.MepTypeFilterVisibility.csproj"),
-    (Join-Path $Root "src\\PlugHub.ReferencePlaneVisibility\\PlugHub.ReferencePlaneVisibility.csproj")
+    (Join-Path $Root "src\\PlugHub.ReferencePlaneVisibility\\PlugHub.ReferencePlaneVisibility.csproj"),
+    (Join-Path $Root "src\\PlugHub.AutoSave\\PlugHub.AutoSave.csproj")
 )
 
 function Test-RevitApiDir {
@@ -46,8 +46,20 @@ if (!$UseRevitApiNuGet) {
 New-Item -ItemType Directory -Force -Path $OutputDir | Out-Null
 $OutputDir = (Resolve-Path $OutputDir).Path
 
-# Ensure PlugHub.Contracts is built first (dependency for all plugin projects)
-$contractsProject = Join-Path $Root "revittool\src\PlugHub\Contracts\PlugHub.Contracts.csproj"
+# Ensure PlugHub/Contracts directory exists for ProjectReference resolution
+# The revittool repo has the project under src/PlugHubContracts (flat name)
+# but our .csproj files reference src/PlugHub/Contracts (nested path).
+$contractsSrcDir = Join-Path $Root "revittool\src\PlugHubContracts"
+$contractsDstDir = Join-Path $Root "revittool\src\PlugHub\Contracts"
+if (Test-Path $contractsSrcDir) {
+    if (!(Test-Path $contractsDstDir)) {
+        # Create junction/symlink: PlugHub/Contracts -> PlugHubContracts
+        cmd /c "mklink /D `"$contractsDstDir`" `"$contractsSrcDir`""
+    }
+}
+
+# Ensure PlugHubContracts is built first (dependency for all plugin projects)
+$contractsProject = Join-Path $Root "revittool\src\PlugHub\Contracts\PlugHubContracts.csproj"
 if (Test-Path $contractsProject) {
     $contractsArgs = @("build", $contractsProject, "-c", $Configuration, "/p:RevitVersion=2020")
     if ($UseRevitApiNuGet) {
