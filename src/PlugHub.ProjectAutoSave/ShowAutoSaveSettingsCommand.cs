@@ -36,9 +36,6 @@ namespace PlugHub.ProjectAutoSave
                 {
                     window.Settings.Save();
                     AutoSaveService.ApplySettings(uiApplication, window.Settings);
-                    TaskDialog.Show("自动保存设置", window.Settings.IsEnabled
-                        ? $"自动保存已在本次 Revit 会话启用，间隔 {window.Settings.IntervalMinutes} 分钟。"
-                        : "自动保存已关闭。");
                 }
 
                 return Result.Succeeded;

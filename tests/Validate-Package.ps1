@@ -628,7 +628,7 @@ Require-Text "src\PlugHub.ProjectAutoSave\ShowAutoSaveSettingsCommand.cs" "AutoS
 Reject-Text "src\PlugHub.ProjectAutoSave\ShowAutoSaveSettingsCommand.cs" "OnStartup" "Project auto-save framework startup hook"
 Reject-Text "src\PlugHub.ProjectAutoSave\ShowAutoSaveSettingsCommand.cs" "OnShutdown" "Project auto-save framework shutdown hook"
 Require-Text "src\PlugHub.ProjectAutoSave\ShowAutoSaveSettingsCommand.cs" "ApplySettings" "Project auto-save settings service application"
-Require-Text "src\PlugHub.ProjectAutoSave\ShowAutoSaveSettingsCommand.cs" "本次 Revit 会话" "Project auto-save session-limited command message"
+Reject-Text "src\PlugHub.ProjectAutoSave\ShowAutoSaveSettingsCommand.cs" 'TaskDialog.Show("自动保存设置"' "Project auto-save save-settings confirmation popup"
 Require-Text "src\PlugHub.ProjectAutoSave\ProjectAutoSaveModule.cs" "ShowAutoSaveSettingsCommand" "Project auto-save settings command registration"
 Reject-Text "src\PlugHub.ProjectAutoSave\ProjectAutoSaveModule.cs" "startup" "Project auto-save module startup tag"
 Require-MonochromeIconColor "icons\project-auto-save.png" 0x1A 0x1A 0x1A
