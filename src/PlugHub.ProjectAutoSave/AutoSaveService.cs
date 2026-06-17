@@ -59,7 +59,7 @@ namespace PlugHub.ProjectAutoSave
 
         private static void OnIdling(object? sender, IdlingEventArgs args)
         {
-            if (_isSaving || _uiApplication == null)
+            if (_isSaving)
             {
                 return;
             }
@@ -71,7 +71,7 @@ namespace PlugHub.ProjectAutoSave
                 return;
             }
 
-            UIDocument? uiDocument = _uiApplication.ActiveUIDocument;
+            UIDocument? uiDocument = _uiApplication?.ActiveUIDocument;
             Document? document = uiDocument?.Document;
             if (document == null || !ShouldSaveDocument(document, settings))
             {
@@ -79,12 +79,12 @@ namespace PlugHub.ProjectAutoSave
             }
 
             string documentKey = GetDocumentKey(document);
-            LastSaveTimes[documentKey] = DateTime.UtcNow;
 
             _isSaving = true;
             try
             {
                 SaveDocument(document);
+                LastSaveTimes[documentKey] = DateTime.UtcNow;
                 if (settings.ShowNotification)
                 {
                     TaskDialog.Show("自动保存", "当前文档已自动保存。");
@@ -105,7 +105,7 @@ namespace PlugHub.ProjectAutoSave
 
         private static bool ShouldSaveDocument(Document document, AutoSaveSettings settings)
         {
-            if (document.IsFamilyDocument || document.IsReadOnly || document.IsModifiable || !document.IsModified)
+            if (document.IsFamilyDocument || document.IsReadOnly || document.IsModifiable)
             {
                 return false;
             }
@@ -120,6 +120,11 @@ namespace PlugHub.ProjectAutoSave
             if (!LastSaveTimes.TryGetValue(documentKey, out DateTime lastSaveTime))
             {
                 LastSaveTimes[documentKey] = now;
+                return false;
+            }
+
+            if (!document.IsModified)
+            {
                 return false;
             }
 

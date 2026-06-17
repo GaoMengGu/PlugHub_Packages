@@ -23,7 +23,7 @@ namespace PlugHub.ProjectAutoSave
                         Id = "plughub.modules.project-auto-save.settings",
                         ModuleId = "plughub.modules.project-auto-save",
                         Name = "自动保存",
-                        Description = "设置项目文件自动保存开关、分钟间隔和保存后弹窗提示。",
+                        Description = "设置本次 Revit 会话内项目文件自动保存开关、分钟间隔和保存后弹窗提示。",
                         Category = "utility",
                         Group = "小工具",
                         Tags = new[] { "project", "save", "auto-save", "settings" },
