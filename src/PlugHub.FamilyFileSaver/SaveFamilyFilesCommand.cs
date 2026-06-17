@@ -25,6 +25,8 @@ namespace PlugHub.FamilyFileSaver
 
             try
             {
+                AutoSaveService.ApplySettings(uiDocument.Application, AutoSaveSettings.Load());
+
                 List<FamilyItem> families = CollectFamilies(document);
                 if (families.Count == 0)
                 {

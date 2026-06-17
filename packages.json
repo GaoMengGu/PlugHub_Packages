@@ -129,7 +129,7 @@
       "version": "V1.0.2",
       "author": "GAOMENGGU",
       "displayName": "族工具",
-      "description": "读取当前项目所有族，筛选后批量保存到指定文件夹。",
+      "description": "读取当前项目所有族，筛选后批量保存到指定文件夹，并支持当前文档间隔自动保存。",
       "assembly": "dist/PlugHub.FamilyFileSaver.dll",
       "category": "family",
       "tags": [
@@ -145,6 +145,13 @@
           "description": "读取当前项目所有族，排除系统族，弹出选择窗口批量保存到指定文件夹。",
           "iconPath": "icons/family-file-saver.png",
           "commandType": "PlugHub.FamilyFileSaver.SaveFamilyFilesCommand"
+        },
+        {
+          "id": "plughub.modules.family-file-saver.auto-save-settings",
+          "displayName": "自动保存",
+          "description": "设置当前文档自动保存开关、分钟间隔和保存后弹窗提示。",
+          "iconPath": "icons/family-file-saver.png",
+          "commandType": "PlugHub.FamilyFileSaver.ShowAutoSaveSettingsCommand"
         }
       ]
     },
