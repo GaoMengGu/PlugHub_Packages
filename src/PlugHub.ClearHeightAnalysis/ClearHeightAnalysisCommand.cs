@@ -1,8 +1,12 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
+using PlugHub.ClearHeightAnalysis.Models;
 using PlugHub.ClearHeightAnalysis.Services;
+using PlugHub.ClearHeightAnalysis.UI;
 
 namespace PlugHub.ClearHeightAnalysis
 {
@@ -22,16 +26,67 @@ namespace PlugHub.ClearHeightAnalysis
 
             try
             {
-                var outlineProvider = new BuildingOutlineProvider();
-                var heatmapRenderer = new HeatmapRenderer();
-                string mapperName = nameof(ObstacleProjectionMapper);
-                if (outlineProvider == null || heatmapRenderer == null || string.IsNullOrWhiteSpace(mapperName))
+                ClearHeightAnalysisWindow window = new ClearHeightAnalysisWindow();
+                IntPtr revitHandle = uiApplication.MainWindowHandle;
+                if (revitHandle != IntPtr.Zero)
                 {
-                    message = "净高分析服务初始化失败。";
+                    var helper = new System.Windows.Interop.WindowInteropHelper(window);
+                    helper.Owner = revitHandle;
+                }
+
+                bool? dialogResult = window.ShowDialog();
+                if (dialogResult != true)
+                {
+                    return Result.Cancelled;
+                }
+
+                AnalysisSettings settings = window.Settings;
+                var outlineProvider = new BuildingOutlineProvider();
+                IReadOnlyList<Rect2d> masks = outlineProvider.GetOutlineMasks(uiDocument, document, settings);
+                if (masks.Count == 0)
+                {
+                    message = "未能识别建筑外轮廓，请选择楼板或使用当前视图裁剪框。";
                     return Result.Failed;
                 }
 
-                TaskDialog.Show("净高分析", "净高分析模块已注册，核心分析流程将在后续任务接入。当前版本不会修改模型。");
+                Rect2d boundary = outlineProvider.GetBoundary(masks);
+                List<GridCell> cells = GridBuilder.BuildInsideRectangles(boundary, masks, settings.GridSizeMillimeters, settings.LevelName, settings.LevelElevationMillimeters).ToList();
+                if (cells.Count == 0)
+                {
+                    message = "分析范围内没有生成任何网格。";
+                    return Result.Failed;
+                }
+
+                var obstacleCollector = new ObstacleCollector();
+                IReadOnlyList<ObstacleProjection> obstacles = obstacleCollector.Collect(document, settings);
+                if (obstacles.Count == 0)
+                {
+                    message = "没有收集到参与净高分析的结构、建筑或机电构件。";
+                    return Result.Failed;
+                }
+
+                List<ClearHeightResult> results = cells
+                    .Select(cell => ClearHeightCalculator.Calculate(cell, ObstacleProjectionMapper.FindCoveringObstacles(cell, obstacles), settings))
+                    .ToList();
+
+                using (var transaction = new Transaction(document, "生成净高分析热力图"))
+                {
+                    transaction.Start();
+                    var cleanupService = new ResultCleanupService();
+                    cleanupService.DeleteExistingResults(document);
+                    var heatmapRenderer = new HeatmapRenderer();
+                    heatmapRenderer.Render(document, document.ActiveView, results, settings, Guid.NewGuid().ToString("N"));
+                    transaction.Commit();
+                }
+
+                AnalysisResultWindow resultWindow = new AnalysisResultWindow(results);
+                if (revitHandle != IntPtr.Zero)
+                {
+                    var helper = new System.Windows.Interop.WindowInteropHelper(resultWindow);
+                    helper.Owner = revitHandle;
+                }
+
+                resultWindow.ShowDialog();
                 return Result.Succeeded;
             }
             catch (Exception ex)
