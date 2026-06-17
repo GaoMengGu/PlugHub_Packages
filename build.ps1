@@ -15,6 +15,7 @@ $Projects = @(
     (Join-Path $Root "src\PlugHub.GridVisibility\PlugHub.GridVisibility.csproj"),
     (Join-Path $Root "src\PlugHub.LevelVisibility\PlugHub.LevelVisibility.csproj"),
     (Join-Path $Root "src\PlugHub.MepTypeFilterVisibility\PlugHub.MepTypeFilterVisibility.csproj"),
+    (Join-Path $Root "src\PlugHub.ClearHeightAnalysis\PlugHub.ClearHeightAnalysis.csproj"),
     (Join-Path $Root "src\PlugHub.ProjectAutoSave\PlugHub.ProjectAutoSave.csproj"),
     (Join-Path $Root "src\PlugHub.ReferencePlaneVisibility\PlugHub.ReferencePlaneVisibility.csproj")
 )

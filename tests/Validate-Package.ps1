@@ -558,6 +558,30 @@ else {
             Require-FeatureIcon $feature "icons/project-auto-save.png"
         }
     }
+
+    $clearHeightModule = $manifest.modules | Where-Object { $_.id -eq "plughub.modules.clear-height-analysis" } | Select-Object -First 1
+    if ($null -eq $clearHeightModule) {
+        Add-Failure "Missing clear height analysis module in packages.json"
+    }
+    else {
+        if ($clearHeightModule.assembly -ne "dist/PlugHub.ClearHeightAnalysis.dll") {
+            Add-Failure "Clear height analysis module assembly must be dist/PlugHub.ClearHeightAnalysis.dll"
+        }
+
+        $feature = $clearHeightModule.features | Where-Object { $_.id -eq "plughub.modules.clear-height-analysis.analyze" } | Select-Object -First 1
+        if ($null -eq $feature) {
+            Add-Failure "Missing clear height analysis feature in packages.json"
+        }
+        else {
+            if ($feature.displayName -ne (ConvertFrom-Json '"\u51c0\u9ad8\u5206\u6790"')) {
+                Add-Failure "Clear height analysis feature displayName must match the manifest display name"
+            }
+            if ($feature.commandType -ne "PlugHub.ClearHeightAnalysis.ClearHeightAnalysisCommand") {
+                Add-Failure "Clear height analysis commandType must be PlugHub.ClearHeightAnalysis.ClearHeightAnalysisCommand"
+            }
+            Require-FeatureIcon $feature "icons/clear-height-analysis.png"
+        }
+    }
 }
 
 Require-File "src\PlugHub.GridVisibility\PlugHub.GridVisibility.csproj"
@@ -634,6 +658,17 @@ Reject-Text "src\PlugHub.ProjectAutoSave\ProjectAutoSaveModule.cs" "startup" "Pr
 Require-MonochromeIconColor "icons\project-auto-save.png" 0x1A 0x1A 0x1A
 Require-Text "build.ps1" "src\PlugHub.ProjectAutoSave\PlugHub.ProjectAutoSave.csproj" "Project auto-save project build registration"
 Require-Text "PlugHub_Packages.slnx" "src/PlugHub.ProjectAutoSave/PlugHub.ProjectAutoSave.csproj" "Project auto-save solution registration"
+
+Require-File "src\PlugHub.ClearHeightAnalysis\PlugHub.ClearHeightAnalysis.csproj"
+Require-File "src\PlugHub.ClearHeightAnalysis\ClearHeightAnalysisModule.cs"
+Require-File "src\PlugHub.ClearHeightAnalysis\ClearHeightAnalysisCommand.cs"
+Require-Text "src\PlugHub.ClearHeightAnalysis\ClearHeightAnalysisModule.cs" "土建工具" "Clear height module business category"
+Require-Text "src\PlugHub.ClearHeightAnalysis\ClearHeightAnalysisCommand.cs" "BuildingOutlineProvider" "Clear height outline provider usage"
+Require-Text "src\PlugHub.ClearHeightAnalysis\ClearHeightAnalysisCommand.cs" "ObstacleProjectionMapper" "Clear height projection mapper usage"
+Require-Text "src\PlugHub.ClearHeightAnalysis\ClearHeightAnalysisCommand.cs" "HeatmapRenderer" "Clear height heatmap renderer usage"
+Require-MonochromeIconColor "icons\clear-height-analysis.png" 0x1A 0x1A 0x1A
+Require-Text "build.ps1" "src\PlugHub.ClearHeightAnalysis\PlugHub.ClearHeightAnalysis.csproj" "Clear height project build registration"
+Require-Text "PlugHub_Packages.slnx" "src/PlugHub.ClearHeightAnalysis/PlugHub.ClearHeightAnalysis.csproj" "Clear height solution registration"
 
 Require-File "src\PlugHub.MepTypeFilterVisibility\PlugHub.MepTypeFilterVisibility.csproj"
 Require-File "src\PlugHub.MepTypeFilterVisibility\MepTypeFilterVisibilityModule.cs"

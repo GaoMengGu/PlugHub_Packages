@@ -149,6 +149,33 @@
       ]
     },
     {
+      "id": "plughub.modules.clear-height-analysis",
+      "version": "V1.0.0",
+      "author": "GAOMENGGU",
+      "displayName": "土建工具",
+      "description": "按建筑外轮廓网格分析结构和机电构件控制下的项目净高。",
+      "assembly": "dist/PlugHub.ClearHeightAnalysis.dll",
+      "category": "civil",
+      "tags": [
+        "civil",
+        "architecture",
+        "structural",
+        "mep",
+        "clear-height",
+        "heatmap",
+        "revit-api"
+      ],
+      "features": [
+        {
+          "id": "plughub.modules.clear-height-analysis.analyze",
+          "displayName": "净高分析",
+          "description": "按可调网格投影结构和机电构件，生成净高热力图和低净高结果表。",
+          "iconPath": "icons/clear-height-analysis.png",
+          "commandType": "PlugHub.ClearHeightAnalysis.ClearHeightAnalysisCommand"
+        }
+      ]
+    },
+    {
       "id": "plughub.modules.project-auto-save",
       "version": "V1.0.0",
       "author": "GAOMENGGU",

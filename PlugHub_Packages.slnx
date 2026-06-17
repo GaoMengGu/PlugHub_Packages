@@ -5,6 +5,7 @@
   <Project Path="src/PlugHub.GridVisibility/PlugHub.GridVisibility.csproj" />
   <Project Path="src/PlugHub.LevelVisibility/PlugHub.LevelVisibility.csproj" />
   <Project Path="src/PlugHub.MepTypeFilterVisibility/PlugHub.MepTypeFilterVisibility.csproj" />
+  <Project Path="src/PlugHub.ClearHeightAnalysis/PlugHub.ClearHeightAnalysis.csproj" />
   <Project Path="src/PlugHub.ProjectAutoSave/PlugHub.ProjectAutoSave.csproj" />
   <Project Path="src/PlugHub.ReferencePlaneVisibility/PlugHub.ReferencePlaneVisibility.csproj" />
 </Solution>
