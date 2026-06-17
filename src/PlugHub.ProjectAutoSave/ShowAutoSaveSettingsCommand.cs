@@ -3,7 +3,7 @@ using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 
-namespace PlugHub.FamilyFileSaver
+namespace PlugHub.ProjectAutoSave
 {
     [Transaction(TransactionMode.Manual)]
     public sealed class ShowAutoSaveSettingsCommand : IExternalCommand

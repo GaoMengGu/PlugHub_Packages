@@ -2,7 +2,7 @@ using System;
 using System.IO;
 using System.Xml.Serialization;
 
-namespace PlugHub.FamilyFileSaver
+namespace PlugHub.ProjectAutoSave
 {
     public sealed class AutoSaveSettings
     {
@@ -77,7 +77,7 @@ namespace PlugHub.FamilyFileSaver
         private static string GetSettingsPath()
         {
             string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-            return Path.Combine(appData, "PlugHub", "FamilyFileSaver", "auto-save-settings.xml");
+            return Path.Combine(appData, "PlugHub", "ProjectAutoSave", "auto-save-settings.xml");
         }
     }
 }

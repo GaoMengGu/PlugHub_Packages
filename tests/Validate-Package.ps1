@@ -450,6 +450,35 @@ else {
             }
             Require-FeatureIcon $feature "icons/family-file-saver.png"
         }
+
+        $autoSaveFeature = $familyFileSaverModule.features | Where-Object { $_.id -eq "plughub.modules.family-file-saver.auto-save-settings" } | Select-Object -First 1
+        if ($null -ne $autoSaveFeature) {
+            Add-Failure "Family file saver module must not contain project auto-save settings feature"
+        }
+    }
+
+    $projectAutoSaveModule = $manifest.modules | Where-Object { $_.id -eq "plughub.modules.project-auto-save" } | Select-Object -First 1
+    if ($null -eq $projectAutoSaveModule) {
+        Add-Failure "Missing project auto-save module in packages.json"
+    }
+    else {
+        if ($projectAutoSaveModule.assembly -ne "dist/PlugHub.ProjectAutoSave.dll") {
+            Add-Failure "Project auto-save module assembly must be dist/PlugHub.ProjectAutoSave.dll"
+        }
+
+        $feature = $projectAutoSaveModule.features | Where-Object { $_.id -eq "plughub.modules.project-auto-save.settings" } | Select-Object -First 1
+        if ($null -eq $feature) {
+            Add-Failure "Missing project auto-save settings feature in packages.json"
+        }
+        else {
+            if ($feature.displayName -ne (ConvertFrom-Json '"\u81ea\u52a8\u4fdd\u5b58"')) {
+                Add-Failure "Project auto-save feature displayName must match the manifest display name"
+            }
+            if ($feature.commandType -ne "PlugHub.ProjectAutoSave.ShowAutoSaveSettingsCommand") {
+                Add-Failure "Project auto-save commandType must be PlugHub.ProjectAutoSave.ShowAutoSaveSettingsCommand"
+            }
+            Require-FeatureIcon $feature "icons/project-auto-save.png"
+        }
     }
 }
 
@@ -488,31 +517,37 @@ Require-File "src\PlugHub.FamilyFileSaver\FamilyFileSaverModule.cs"
 Require-File "src\PlugHub.FamilyFileSaver\FamilyItem.cs"
 Require-File "src\PlugHub.FamilyFileSaver\FamilySelectionWindow.xaml"
 Require-File "src\PlugHub.FamilyFileSaver\FamilySelectionWindow.xaml.cs"
-Require-File "src\PlugHub.FamilyFileSaver\AutoSaveSettings.cs"
-Require-File "src\PlugHub.FamilyFileSaver\AutoSaveSettingsWindow.xaml"
-Require-File "src\PlugHub.FamilyFileSaver\AutoSaveSettingsWindow.xaml.cs"
-Require-File "src\PlugHub.FamilyFileSaver\AutoSaveService.cs"
-Require-File "src\PlugHub.FamilyFileSaver\ShowAutoSaveSettingsCommand.cs"
 Require-File "src\PlugHub.FamilyFileSaver\SaveFamilyFilesCommand.cs"
 Require-Text "src\PlugHub.FamilyFileSaver\SaveFamilyFilesCommand.cs" "EditFamily" "Family edit API"
 Require-Text "src\PlugHub.FamilyFileSaver\SaveFamilyFilesCommand.cs" "SaveAs" "Family save API"
 Require-Text "src\PlugHub.FamilyFileSaver\SaveFamilyFilesCommand.cs" "FolderBrowserDialog" "Family save destination selector"
 Require-Text "src\PlugHub.FamilyFileSaver\SaveFamilyFilesCommand.cs" "DialogBoxShowing" "Family saver background dialog suppression"
 Require-Text "src\PlugHub.FamilyFileSaver\SaveFamilyFilesCommand.cs" "OverrideResult" "Family saver dialog auto-dismiss result"
-Require-Text "src\PlugHub.FamilyFileSaver\AutoSaveSettings.cs" "DefaultIntervalMinutes = 10" "Family saver default auto-save interval"
-Require-Text "src\PlugHub.FamilyFileSaver\AutoSaveSettings.cs" "ShowNotification" "Family saver auto-save notification toggle"
-Require-Text "src\PlugHub.FamilyFileSaver\AutoSaveSettingsWindow.xaml" "自动保存设置" "Family saver auto-save settings title"
-Require-Text "src\PlugHub.FamilyFileSaver\AutoSaveSettingsWindow.xaml" "自定义保存" "Family saver auto-save custom switch"
-Require-Text "src\PlugHub.FamilyFileSaver\AutoSaveSettingsWindow.xaml" "分钟间隔" "Family saver auto-save interval input"
-Require-Text "src\PlugHub.FamilyFileSaver\AutoSaveService.cs" "Idling" "Family saver auto-save Revit idling hook"
-Require-Text "src\PlugHub.FamilyFileSaver\AutoSaveService.cs" "SaveDocument" "Family saver auto-save document write path"
-Require-Text "src\PlugHub.FamilyFileSaver\ShowAutoSaveSettingsCommand.cs" "AutoSaveSettingsWindow" "Family saver settings window command"
-Require-Text "src\PlugHub.FamilyFileSaver\ShowAutoSaveSettingsCommand.cs" "ApplySettings" "Family saver settings service application"
-Require-Text "src\PlugHub.FamilyFileSaver\FamilyFileSaverModule.cs" "ShowAutoSaveSettingsCommand" "Family saver settings command registration"
+Reject-Text "src\PlugHub.FamilyFileSaver\FamilyFileSaverModule.cs" "ShowAutoSaveSettingsCommand" "Family saver project auto-save command registration"
 Require-Text "src\PlugHub.FamilyFileSaver\FamilySelectionWindow.xaml.cs" "_selectedFamilyIds" "Family saver persistent selection state"
 Require-Text "src\PlugHub.FamilyFileSaver\FamilySelectionWindow.xaml.cs" "CaptureCurrentSelections" "Family saver filter selection persistence"
 Require-Text "build.ps1" "src\PlugHub.FamilyFileSaver\PlugHub.FamilyFileSaver.csproj" "Family file saver project build registration"
 Require-Text "PlugHub_Packages.slnx" "src/PlugHub.FamilyFileSaver/PlugHub.FamilyFileSaver.csproj" "Family file saver solution registration"
+
+Require-File "src\PlugHub.ProjectAutoSave\PlugHub.ProjectAutoSave.csproj"
+Require-File "src\PlugHub.ProjectAutoSave\ProjectAutoSaveModule.cs"
+Require-File "src\PlugHub.ProjectAutoSave\AutoSaveSettings.cs"
+Require-File "src\PlugHub.ProjectAutoSave\AutoSaveSettingsWindow.xaml"
+Require-File "src\PlugHub.ProjectAutoSave\AutoSaveSettingsWindow.xaml.cs"
+Require-File "src\PlugHub.ProjectAutoSave\AutoSaveService.cs"
+Require-File "src\PlugHub.ProjectAutoSave\ShowAutoSaveSettingsCommand.cs"
+Require-Text "src\PlugHub.ProjectAutoSave\AutoSaveSettings.cs" "DefaultIntervalMinutes = 10" "Project auto-save default interval"
+Require-Text "src\PlugHub.ProjectAutoSave\AutoSaveSettings.cs" "ShowNotification" "Project auto-save notification toggle"
+Require-Text "src\PlugHub.ProjectAutoSave\AutoSaveSettingsWindow.xaml" "自动保存设置" "Project auto-save settings title"
+Require-Text "src\PlugHub.ProjectAutoSave\AutoSaveSettingsWindow.xaml" "自定义保存" "Project auto-save custom switch"
+Require-Text "src\PlugHub.ProjectAutoSave\AutoSaveSettingsWindow.xaml" "分钟间隔" "Project auto-save interval input"
+Require-Text "src\PlugHub.ProjectAutoSave\AutoSaveService.cs" "Idling" "Project auto-save Revit idling hook"
+Require-Text "src\PlugHub.ProjectAutoSave\AutoSaveService.cs" "SaveDocument" "Project auto-save document write path"
+Require-Text "src\PlugHub.ProjectAutoSave\ShowAutoSaveSettingsCommand.cs" "AutoSaveSettingsWindow" "Project auto-save settings window command"
+Require-Text "src\PlugHub.ProjectAutoSave\ShowAutoSaveSettingsCommand.cs" "ApplySettings" "Project auto-save settings service application"
+Require-Text "src\PlugHub.ProjectAutoSave\ProjectAutoSaveModule.cs" "ShowAutoSaveSettingsCommand" "Project auto-save settings command registration"
+Require-Text "build.ps1" "src\PlugHub.ProjectAutoSave\PlugHub.ProjectAutoSave.csproj" "Project auto-save project build registration"
+Require-Text "PlugHub_Packages.slnx" "src/PlugHub.ProjectAutoSave/PlugHub.ProjectAutoSave.csproj" "Project auto-save solution registration"
 
 Require-File "src\PlugHub.MepTypeFilterVisibility\PlugHub.MepTypeFilterVisibility.csproj"
 Require-File "src\PlugHub.MepTypeFilterVisibility\MepTypeFilterVisibilityModule.cs"

@@ -1,7 +1,7 @@
 using System;
 using System.Windows;
 
-namespace PlugHub.FamilyFileSaver
+namespace PlugHub.ProjectAutoSave
 {
     public partial class AutoSaveSettingsWindow : Window
     {

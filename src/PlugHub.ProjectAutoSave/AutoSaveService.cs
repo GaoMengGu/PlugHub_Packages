@@ -4,7 +4,7 @@ using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 using Autodesk.Revit.UI.Events;
 
-namespace PlugHub.FamilyFileSaver
+namespace PlugHub.ProjectAutoSave
 {
     public static class AutoSaveService
     {
@@ -105,7 +105,7 @@ namespace PlugHub.FamilyFileSaver
 
         private static bool ShouldSaveDocument(Document document, AutoSaveSettings settings)
         {
-            if (document.IsReadOnly || document.IsModifiable || !document.IsModified)
+            if (document.IsFamilyDocument || document.IsReadOnly || document.IsModifiable || !document.IsModified)
             {
                 return false;
             }
