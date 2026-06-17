@@ -149,6 +149,31 @@
       ]
     },
     {
+      "id": "plughub.modules.project-auto-save",
+      "version": "V1.0.0",
+      "author": "GAOMENGGU",
+      "displayName": "小工具",
+      "description": "按自定义分钟间隔自动保存当前 Revit 项目文件。",
+      "assembly": "dist/PlugHub.ProjectAutoSave.dll",
+      "category": "utility",
+      "tags": [
+        "project",
+        "save",
+        "auto-save",
+        "settings",
+        "revit-api"
+      ],
+      "features": [
+        {
+          "id": "plughub.modules.project-auto-save.settings",
+          "displayName": "自动保存",
+          "description": "设置本次 Revit 会话内项目文件自动保存开关、分钟间隔和保存后弹窗提示。",
+          "iconPath": "icons/project-auto-save.png",
+          "commandType": "PlugHub.ProjectAutoSave.ShowAutoSaveSettingsCommand"
+        }
+      ]
+    },
+    {
       "id": "plughub.modules.mep-type-filter-visibility",
       "version": "V1.0.2",
       "author": "GAOMENGGU",

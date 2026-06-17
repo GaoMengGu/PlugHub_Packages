@@ -139,6 +139,80 @@ function Require-RevitRibbonPng {
     }
 }
 
+function Require-MonochromeIconColor {
+    param(
+        [string]$RelativePath,
+        [int]$Red,
+        [int]$Green,
+        [int]$Blue
+    )
+
+    $path = Join-Path $Root $RelativePath
+    if (!(Test-Path -LiteralPath $path)) {
+        Add-Failure "Icon file is missing: $RelativePath"
+        return
+    }
+
+    $bytes = [IO.File]::ReadAllBytes($path)
+    if ($bytes.Length -lt 33) {
+        Add-Failure "Icon $RelativePath is too small to inspect"
+        return
+    }
+
+    $width = ConvertFrom-BigEndianUInt32 $bytes 16
+    $height = ConvertFrom-BigEndianUInt32 $bytes 20
+    $bitDepth = [int]$bytes[24]
+    $colorType = [int]$bytes[25]
+    if ($bitDepth -ne 8 -or $colorType -ne 6) {
+        Add-Failure "Icon $RelativePath must be an 8-bit RGBA PNG before color inspection"
+        return
+    }
+
+    $compressed = New-Object System.Collections.Generic.List[byte]
+    $offset = 8
+    while ($offset -lt $bytes.Length) {
+        $length = [int](ConvertFrom-BigEndianUInt32 $bytes $offset)
+        $type = [Text.Encoding]::ASCII.GetString($bytes, $offset + 4, 4)
+        if ($type -eq "IDAT") {
+            for ($i = 0; $i -lt $length; $i++) {
+                $compressed.Add($bytes[$offset + 8 + $i])
+            }
+        }
+        $offset += 12 + $length
+    }
+
+    $inputStream = [IO.MemoryStream]::new($compressed.ToArray())
+    $zlibStream = [IO.Compression.ZLibStream]::new($inputStream, [IO.Compression.CompressionMode]::Decompress)
+    $outputStream = [IO.MemoryStream]::new()
+    try {
+        $zlibStream.CopyTo($outputStream)
+    }
+    finally {
+        $zlibStream.Dispose()
+        $inputStream.Dispose()
+    }
+
+    $raw = $outputStream.ToArray()
+    $outputStream.Dispose()
+    $stride = 1 + ($width * 4)
+    for ($y = 0; $y -lt $height; $y++) {
+        $rowOffset = $y * $stride
+        if ($raw[$rowOffset] -ne 0) {
+            Add-Failure "Icon $RelativePath must use unfiltered PNG rows for color inspection"
+            return
+        }
+
+        for ($x = 0; $x -lt $width; $x++) {
+            $pixelOffset = $rowOffset + 1 + ($x * 4)
+            $alpha = [int]$raw[$pixelOffset + 3]
+            if ($alpha -gt 0 -and ([int]$raw[$pixelOffset] -ne $Red -or [int]$raw[$pixelOffset + 1] -ne $Green -or [int]$raw[$pixelOffset + 2] -ne $Blue)) {
+                Add-Failure "Icon $RelativePath must use #$('{0:X2}{1:X2}{2:X2}' -f $Red, $Green, $Blue) for all visible pixels"
+                return
+            }
+        }
+    }
+}
+
 function Test-ClassificationMatch {
     param(
         [System.Collections.Generic.List[string]]$Values,
@@ -450,6 +524,39 @@ else {
             }
             Require-FeatureIcon $feature "icons/family-file-saver.png"
         }
+
+        $autoSaveFeature = $familyFileSaverModule.features | Where-Object { $_.id -eq "plughub.modules.family-file-saver.auto-save-settings" } | Select-Object -First 1
+        if ($null -ne $autoSaveFeature) {
+            Add-Failure "Family file saver module must not contain project auto-save settings feature"
+        }
+    }
+
+    $projectAutoSaveModule = $manifest.modules | Where-Object { $_.id -eq "plughub.modules.project-auto-save" } | Select-Object -First 1
+    if ($null -eq $projectAutoSaveModule) {
+        Add-Failure "Missing project auto-save module in packages.json"
+    }
+    else {
+        if ($projectAutoSaveModule.assembly -ne "dist/PlugHub.ProjectAutoSave.dll") {
+            Add-Failure "Project auto-save module assembly must be dist/PlugHub.ProjectAutoSave.dll"
+        }
+
+        if (@($projectAutoSaveModule.tags) -contains "startup") {
+            Add-Failure "Project auto-save module must not declare startup tag without framework startup support"
+        }
+
+        $feature = $projectAutoSaveModule.features | Where-Object { $_.id -eq "plughub.modules.project-auto-save.settings" } | Select-Object -First 1
+        if ($null -eq $feature) {
+            Add-Failure "Missing project auto-save settings feature in packages.json"
+        }
+        else {
+            if ($feature.displayName -ne (ConvertFrom-Json '"\u81ea\u52a8\u4fdd\u5b58"')) {
+                Add-Failure "Project auto-save feature displayName must match the manifest display name"
+            }
+            if ($feature.commandType -ne "PlugHub.ProjectAutoSave.ShowAutoSaveSettingsCommand") {
+                Add-Failure "Project auto-save commandType must be PlugHub.ProjectAutoSave.ShowAutoSaveSettingsCommand"
+            }
+            Require-FeatureIcon $feature "icons/project-auto-save.png"
+        }
     }
 }
 
@@ -494,10 +601,39 @@ Require-Text "src\PlugHub.FamilyFileSaver\SaveFamilyFilesCommand.cs" "SaveAs" "F
 Require-Text "src\PlugHub.FamilyFileSaver\SaveFamilyFilesCommand.cs" "FolderBrowserDialog" "Family save destination selector"
 Require-Text "src\PlugHub.FamilyFileSaver\SaveFamilyFilesCommand.cs" "DialogBoxShowing" "Family saver background dialog suppression"
 Require-Text "src\PlugHub.FamilyFileSaver\SaveFamilyFilesCommand.cs" "OverrideResult" "Family saver dialog auto-dismiss result"
+Reject-Text "src\PlugHub.FamilyFileSaver\FamilyFileSaverModule.cs" "ShowAutoSaveSettingsCommand" "Family saver project auto-save command registration"
 Require-Text "src\PlugHub.FamilyFileSaver\FamilySelectionWindow.xaml.cs" "_selectedFamilyIds" "Family saver persistent selection state"
 Require-Text "src\PlugHub.FamilyFileSaver\FamilySelectionWindow.xaml.cs" "CaptureCurrentSelections" "Family saver filter selection persistence"
 Require-Text "build.ps1" "src\PlugHub.FamilyFileSaver\PlugHub.FamilyFileSaver.csproj" "Family file saver project build registration"
 Require-Text "PlugHub_Packages.slnx" "src/PlugHub.FamilyFileSaver/PlugHub.FamilyFileSaver.csproj" "Family file saver solution registration"
+
+Require-File "src\PlugHub.ProjectAutoSave\PlugHub.ProjectAutoSave.csproj"
+Require-File "src\PlugHub.ProjectAutoSave\ProjectAutoSaveModule.cs"
+Require-File "src\PlugHub.ProjectAutoSave\AutoSaveSettings.cs"
+Require-File "src\PlugHub.ProjectAutoSave\AutoSaveSettingsWindow.xaml"
+Require-File "src\PlugHub.ProjectAutoSave\AutoSaveSettingsWindow.xaml.cs"
+Require-File "src\PlugHub.ProjectAutoSave\AutoSaveService.cs"
+Require-File "src\PlugHub.ProjectAutoSave\ShowAutoSaveSettingsCommand.cs"
+Require-Text "src\PlugHub.ProjectAutoSave\AutoSaveSettings.cs" "DefaultIntervalMinutes = 10" "Project auto-save default interval"
+Require-Text "src\PlugHub.ProjectAutoSave\AutoSaveSettings.cs" "ShowNotification" "Project auto-save notification toggle"
+Require-Text "src\PlugHub.ProjectAutoSave\AutoSaveSettingsWindow.xaml" "自动保存设置" "Project auto-save settings title"
+Require-Text "src\PlugHub.ProjectAutoSave\AutoSaveSettingsWindow.xaml" "本次 Revit 会话" "Project auto-save session-limited setting copy"
+Require-Text "src\PlugHub.ProjectAutoSave\AutoSaveSettingsWindow.xaml" 'SizeToContent="Height"' "Project auto-save settings window height sizing"
+Require-Text "src\PlugHub.ProjectAutoSave\AutoSaveSettingsWindow.xaml" "自定义保存" "Project auto-save custom switch"
+Require-Text "src\PlugHub.ProjectAutoSave\AutoSaveSettingsWindow.xaml" "分钟间隔" "Project auto-save interval input"
+Require-Text "src\PlugHub.ProjectAutoSave\AutoSaveService.cs" "Idling" "Project auto-save Revit idling hook"
+Require-Text "src\PlugHub.ProjectAutoSave\AutoSaveService.cs" "SaveDocument" "Project auto-save document write path"
+Require-Text "src\PlugHub.ProjectAutoSave\AutoSaveService.cs" "document.IsFamilyDocument" "Project auto-save family document exclusion"
+Require-Text "src\PlugHub.ProjectAutoSave\ShowAutoSaveSettingsCommand.cs" "AutoSaveSettingsWindow" "Project auto-save settings window command"
+Reject-Text "src\PlugHub.ProjectAutoSave\ShowAutoSaveSettingsCommand.cs" "OnStartup" "Project auto-save framework startup hook"
+Reject-Text "src\PlugHub.ProjectAutoSave\ShowAutoSaveSettingsCommand.cs" "OnShutdown" "Project auto-save framework shutdown hook"
+Require-Text "src\PlugHub.ProjectAutoSave\ShowAutoSaveSettingsCommand.cs" "ApplySettings" "Project auto-save settings service application"
+Reject-Text "src\PlugHub.ProjectAutoSave\ShowAutoSaveSettingsCommand.cs" 'TaskDialog.Show("自动保存设置"' "Project auto-save save-settings confirmation popup"
+Require-Text "src\PlugHub.ProjectAutoSave\ProjectAutoSaveModule.cs" "ShowAutoSaveSettingsCommand" "Project auto-save settings command registration"
+Reject-Text "src\PlugHub.ProjectAutoSave\ProjectAutoSaveModule.cs" "startup" "Project auto-save module startup tag"
+Require-MonochromeIconColor "icons\project-auto-save.png" 0x1A 0x1A 0x1A
+Require-Text "build.ps1" "src\PlugHub.ProjectAutoSave\PlugHub.ProjectAutoSave.csproj" "Project auto-save project build registration"
+Require-Text "PlugHub_Packages.slnx" "src/PlugHub.ProjectAutoSave/PlugHub.ProjectAutoSave.csproj" "Project auto-save solution registration"
 
 Require-File "src\PlugHub.MepTypeFilterVisibility\PlugHub.MepTypeFilterVisibility.csproj"
 Require-File "src\PlugHub.MepTypeFilterVisibility\MepTypeFilterVisibilityModule.cs"
