@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <Nullable>disable</Nullable>
+    <LangVersion>8.0</LangVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.10.0" />
+    <PackageReference Include="xunit" Version="2.8.1" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.1" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="../../src/PlugHub.ClearHeightAnalysis/Models/AnalysisSettings.cs" Link="Models/AnalysisSettings.cs" />
+    <Compile Include="../../src/PlugHub.ClearHeightAnalysis/Models/ClearHeightResult.cs" Link="Models/ClearHeightResult.cs" />
+    <Compile Include="../../src/PlugHub.ClearHeightAnalysis/Models/GridCell.cs" Link="Models/GridCell.cs" />
+    <Compile Include="../../src/PlugHub.ClearHeightAnalysis/Models/ObstacleProjection.cs" Link="Models/ObstacleProjection.cs" />
+    <Compile Include="../../src/PlugHub.ClearHeightAnalysis/Models/Rect2d.cs" Link="Models/Rect2d.cs" />
+    <Compile Include="../../src/PlugHub.ClearHeightAnalysis/Models/RiskLevel.cs" Link="Models/RiskLevel.cs" />
+    <Compile Include="../../src/PlugHub.ClearHeightAnalysis/Services/ClearHeightCalculator.cs" Link="Services/ClearHeightCalculator.cs" />
+    <Compile Include="../../src/PlugHub.ClearHeightAnalysis/Services/GridBuilder.cs" Link="Services/GridBuilder.cs" />
+    <Compile Include="../../src/PlugHub.ClearHeightAnalysis/Services/ObstacleProjectionMapper.cs" Link="Services/ObstacleProjectionMapper.cs" />
+  </ItemGroup>
+</Project>
