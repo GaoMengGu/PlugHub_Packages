@@ -21,6 +21,8 @@
     <Compile Include="../../src/PlugHub.ClearHeightAnalysis/Models/RiskLevel.cs" Link="Models/RiskLevel.cs" />
     <Compile Include="../../src/PlugHub.ClearHeightAnalysis/Services/ClearHeightCalculator.cs" Link="Services/ClearHeightCalculator.cs" />
     <Compile Include="../../src/PlugHub.ClearHeightAnalysis/Services/GridBuilder.cs" Link="Services/GridBuilder.cs" />
+    <Compile Include="../../src/PlugHub.ClearHeightAnalysis/Services/HeatmapResultLimiter.cs" Link="Services/HeatmapResultLimiter.cs" />
+    <Compile Include="../../src/PlugHub.ClearHeightAnalysis/Services/ObstacleVerticalFilter.cs" Link="Services/ObstacleVerticalFilter.cs" />
     <Compile Include="../../src/PlugHub.ClearHeightAnalysis/Services/ObstacleProjectionMapper.cs" Link="Services/ObstacleProjectionMapper.cs" />
   </ItemGroup>
 </Project>

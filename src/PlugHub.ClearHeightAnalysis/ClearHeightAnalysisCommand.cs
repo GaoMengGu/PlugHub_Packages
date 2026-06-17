@@ -56,6 +56,11 @@ namespace PlugHub.ClearHeightAnalysis
                     message = "分析范围内没有生成任何网格。";
                     return Result.Failed;
                 }
+                if (cells.Count > settings.MaximumGridCells)
+                {
+                    message = "当前范围会生成 " + cells.Count + " 个网格，超过上限 " + settings.MaximumGridCells + "。请增大网格尺寸或缩小分析范围。";
+                    return Result.Failed;
+                }
 
                 var obstacleCollector = new ObstacleCollector();
                 IReadOnlyList<ObstacleProjection> obstacles = obstacleCollector.Collect(document, settings);
@@ -75,7 +80,8 @@ namespace PlugHub.ClearHeightAnalysis
                     var cleanupService = new ResultCleanupService();
                     cleanupService.DeleteExistingResults(document);
                     var heatmapRenderer = new HeatmapRenderer();
-                    heatmapRenderer.Render(document, document.ActiveView, results, settings, Guid.NewGuid().ToString("N"));
+                    IReadOnlyList<ClearHeightResult> renderResults = HeatmapResultLimiter.LimitForRendering(results, settings);
+                    heatmapRenderer.Render(document, document.ActiveView, renderResults, settings, Guid.NewGuid().ToString("N"));
                     transaction.Commit();
                 }
 

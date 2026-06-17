@@ -103,7 +103,7 @@ namespace PlugHub.ClearHeightAnalysis.Services
             XYZ max = transform.OfPoint(boundingBox.Max);
             double bottomMillimeters = UnitConversion.FeetToMillimeters(Math.Min(min.Z, max.Z));
             double topMillimeters = UnitConversion.FeetToMillimeters(Math.Max(min.Z, max.Z));
-            if (topMillimeters < settings.LevelElevationMillimeters || bottomMillimeters > settings.LevelElevationMillimeters + settings.SearchHeightMillimeters)
+            if (!ObstacleVerticalFilter.ShouldIncludeOverheadObstacle(bottomMillimeters, topMillimeters, settings))
             {
                 return null;
             }

@@ -18,5 +18,7 @@ namespace PlugHub.ClearHeightAnalysis.Models
         public bool IncludeMep { get; set; } = true;
         public double MinimumPipeDiameterMillimeters { get; set; } = 50;
         public bool RenderOnlyProblemCells { get; set; } = true;
+        public int MaximumGridCells { get; set; } = 2000;
+        public int MaximumRenderedCells { get; set; } = 500;
     }
 }
