@@ -12,5 +12,6 @@
     <Revit2020InstallDir Condition="'$(Revit2020InstallDir)' == ''">D:\Program Files\Autodesk\Revit 2020</Revit2020InstallDir>
     <RevitApiDir Condition="'$(RevitApiDir)' == ''">$(Revit2020InstallDir)</RevitApiDir>
     <RevitApiNuGetVersion Condition="'$(RevitApiNuGetVersion)' == ''">2020.2.1.2001</RevitApiNuGetVersion>
+    <PlugHubRoot Condition="'$(PlugHubRoot)' == ''">$(MSBuildThisFileDirectory)..\PlugHub</PlugHubRoot>
   </PropertyGroup>
 </Project>

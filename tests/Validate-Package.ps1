@@ -56,6 +56,21 @@ function Reject-Text {
     }
 }
 
+function Validate-PlugHubContractsReferences {
+    $projectFiles = Get-ChildItem -LiteralPath (Join-Path $Root "src") -Filter "*.csproj" -Recurse
+    foreach ($project in $projectFiles) {
+        $relativePath = [IO.Path]::GetRelativePath($Root, $project.FullName)
+        $text = Get-Content -Raw -Encoding UTF8 -LiteralPath $project.FullName
+        if ($text -match [regex]::Escape("revittool\src\PlugHub.Contracts\PlugHub.Contracts.csproj")) {
+            Add-Failure "$relativePath must not hard-code the old revittool framework directory."
+        }
+
+        if ($text -match "PlugHub\.Contracts\.csproj" -and $text -notmatch [regex]::Escape('$(PlugHubRoot)')) {
+            Add-Failure "$relativePath must reference PlugHub.Contracts through the PlugHubRoot MSBuild property."
+        }
+    }
+}
+
 function Test-JsonProperty {
     param(
         [object]$Value,
@@ -741,6 +756,7 @@ Require-Text "src\PlugHub.MepTypeFilterVisibility\ApplyMepTypeFilterVisibilityCo
 Require-Text "src\PlugHub.MepTypeFilterVisibility\ApplyMepTypeFilterVisibilityCommand.cs" "EndsWith(typeFilterName, StringComparison.Ordinal)" "MEP type filter prefixed name suffix comparison"
 Require-Text "build.ps1" "src\PlugHub.MepTypeFilterVisibility\PlugHub.MepTypeFilterVisibility.csproj" "MEP type filter visibility project build registration"
 Require-Text "PlugHub_Packages.slnx" "src/PlugHub.MepTypeFilterVisibility/PlugHub.MepTypeFilterVisibility.csproj" "MEP type filter visibility solution registration"
+Validate-PlugHubContractsReferences
 Reject-Text "packages.json" "builtin:" "Built-in icon reference"
 Reject-Text "packages.json" "Tee/Tap" "Duct preferred junction old Tee/Tap wording"
 Require-Text ".github\workflows\build-package.yml" '$indexVersionPattern = [regex]::new(' "Root indexVersion replacement regex instance"
