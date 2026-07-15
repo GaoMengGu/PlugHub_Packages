@@ -24,5 +24,6 @@
     <Compile Include="../../src/PlugHub.ClearHeightAnalysis/Services/HeatmapResultLimiter.cs" Link="Services/HeatmapResultLimiter.cs" />
     <Compile Include="../../src/PlugHub.ClearHeightAnalysis/Services/ObstacleVerticalFilter.cs" Link="Services/ObstacleVerticalFilter.cs" />
     <Compile Include="../../src/PlugHub.ClearHeightAnalysis/Services/ObstacleProjectionMapper.cs" Link="Services/ObstacleProjectionMapper.cs" />
+    <Compile Include="../../src/PlugHub.ClearHeightAnalysis/Core/**/*.cs" LinkBase="Core" />
   </ItemGroup>
 </Project>
