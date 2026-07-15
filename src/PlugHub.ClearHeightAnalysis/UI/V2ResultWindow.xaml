@@ -1,0 +1,86 @@
+<Window x:Class="PlugHub.ClearHeightAnalysis.UI.V2ResultWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="净高分析结果管理" Width="1180" Height="720" MinWidth="980" MinHeight="620"
+        WindowStartupLocation="CenterOwner" FontFamily="Microsoft YaHei" FontSize="13"
+        Background="#F8FAFC" Foreground="#0F172A">
+    <Window.Resources>
+        <Style TargetType="Button">
+            <Setter Property="Padding" Value="14,8"/><Setter Property="Margin" Value="0,0,8,8"/>
+            <Setter Property="MinHeight" Value="36"/><Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+        </Style>
+        <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="Background" Value="#2563EB"/><Setter Property="Foreground" Value="White"/><Setter Property="BorderBrush" Value="#2563EB"/>
+        </Style>
+        <Style TargetType="ComboBox"><Setter Property="MinHeight" Value="32"/><Setter Property="Padding" Value="6,3"/></Style>
+    </Window.Resources>
+    <Grid Margin="18">
+        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+        <Border Grid.Row="0" Background="White" BorderBrush="#E4ECFC" BorderThickness="1" Padding="14" CornerRadius="4">
+            <Grid>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="460"/></Grid.ColumnDefinitions>
+                <StackPanel>
+                    <TextBlock Text="净高分析结果" FontSize="20" FontWeight="SemiBold"/>
+                    <TextBlock x:Name="SummaryText" Margin="0,5,0,0" Foreground="#475569" TextWrapping="Wrap"/>
+                </StackPanel>
+                <StackPanel Grid.Column="1">
+                    <TextBlock Text="历史分析批次" FontWeight="SemiBold"/>
+                    <ComboBox x:Name="BatchComboBox" Margin="0,5,0,0" DisplayMemberPath="DisplayName" SelectionChanged="BatchComboBox_SelectionChanged"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+        <Border Grid.Row="1" x:Name="ApproximationBanner" Background="#FFF7ED" BorderBrush="#FDBA74" BorderThickness="1" Padding="10" Margin="0,10,0,0" CornerRadius="4">
+            <TextBlock x:Name="ApproximationText" Text="近似结果提醒" Foreground="#9A3412" TextWrapping="Wrap"/>
+        </Border>
+        <Border Grid.Row="2" Background="White" BorderBrush="#E4ECFC" BorderThickness="1" Padding="10" Margin="0,10,0,10" CornerRadius="4">
+            <WrapPanel VerticalAlignment="Center">
+                <TextBlock Text="状态" VerticalAlignment="Center" Margin="0,0,6,0"/><ComboBox x:Name="StatusFilter" Width="125" Margin="0,0,14,0" SelectionChanged="Filter_Changed"/>
+                <TextBlock Text="可信度" VerticalAlignment="Center" Margin="0,0,6,0"/><ComboBox x:Name="ConfidenceFilter" Width="150" Margin="0,0,14,0" SelectionChanged="Filter_Changed"/>
+                <TextBlock Text="来源模型" VerticalAlignment="Center" Margin="0,0,6,0"/><ComboBox x:Name="SourceFilter" Width="190" Margin="0,0,14,0" SelectionChanged="Filter_Changed"/>
+                <TextBlock Text="构件类别" VerticalAlignment="Center" Margin="0,0,6,0"/><ComboBox x:Name="CategoryFilter" Width="150" SelectionChanged="Filter_Changed"/>
+            </WrapPanel>
+        </Border>
+        <Grid Grid.Row="3">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="260"/><ColumnDefinition Width="10"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+            <Border Background="White" BorderBrush="#E4ECFC" BorderThickness="1" Padding="10" CornerRadius="4">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top" Text="风险区域（选择后查看成员网格）" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                    <ListBox x:Name="RegionList" DisplayMemberPath="DisplayName" SelectionChanged="RegionList_SelectionChanged"/>
+                </DockPanel>
+            </Border>
+            <Border Grid.Column="2" Background="White" BorderBrush="#E4ECFC" BorderThickness="1" Padding="8" CornerRadius="4">
+                <DataGrid x:Name="ResultsGrid" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False"
+                          HeadersVisibility="Column" GridLinesVisibility="Horizontal" AlternatingRowBackground="#F8FAFC">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="网格" Binding="{Binding CellNumber}" Width="105"/>
+                        <DataGridTextColumn Header="状态" Binding="{Binding Status}" Width="85"/>
+                        <DataGridTextColumn Header="净高(mm)" Binding="{Binding Height}" Width="85"/>
+                        <DataGridTextColumn Header="差值(mm)" Binding="{Binding Difference}" Width="85"/>
+                        <DataGridTextColumn Header="可信度" Binding="{Binding Confidence}" Width="125"/>
+                        <DataGridTextColumn Header="控制构件" Binding="{Binding Obstacle}" Width="150"/>
+                        <DataGridTextColumn Header="类别" Binding="{Binding Category}" Width="110"/>
+                        <DataGridTextColumn Header="来源模型" Binding="{Binding Source}" Width="150"/>
+                        <DataGridTextColumn Header="构件Key" Binding="{Binding ObstacleKey}" Width="*"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </Border>
+        </Grid>
+        <Border Grid.Row="4" Background="White" BorderBrush="#E4ECFC" BorderThickness="1" Padding="10" Margin="0,10,0,0" CornerRadius="4">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                    <Button Content="删除批次" Foreground="#DC2626" Click="DeleteBatch_Click"/>
+                    <Button Content="关闭" Click="Close_Click"/>
+                </StackPanel>
+                <WrapPanel>
+                    <Button Content="生成轻量轮廓" Style="{StaticResource PrimaryButton}" Click="Lightweight_Click" ToolTip="默认成果：详图线和编号，不创建填充"/>
+                    <Button Content="面积色块（可选）" Click="MergedArea_Click" ToolTip="合并同等级网格后创建面积"/>
+                    <Button Content="逐格面积（小范围）" Click="CellArea_Click"/>
+                    <Button Content="PNG 总览" Click="Png_Click"/>
+                    <Button Content="导出 CSV" Click="Csv_Click"/>
+                    <ComboBox x:Name="OutputComboBox" Width="190" Margin="4,0,8,8" DisplayMemberPath="DisplayName"/>
+                    <Button Content="删除所选成果" Click="DeleteOutput_Click"/>
+                </WrapPanel>
+            </DockPanel>
+        </Border>
+    </Grid>
+</Window>

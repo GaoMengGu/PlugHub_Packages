@@ -26,6 +26,8 @@ namespace PlugHub.ClearHeightAnalysis.Revit
         public int ProblemCount { get; }
         public StoredBatchStatus Status { get; }
         public string StatusMessage { get; }
+        public string DisplayName => CreatedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm") + "  " +
+            LevelName + "  " + GridCount + "格  " + (Status == StoredBatchStatus.Available ? "可用" : StatusMessage);
     }
 
     public sealed class AnalysisBatchRepository
