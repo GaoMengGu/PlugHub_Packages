@@ -16,6 +16,20 @@ namespace PlugHub.ClearHeightAnalysis.Core.Models
             string documentTitle,
             AnalysisRunData runData,
             IEnumerable<DerivedOutputRecord> outputs)
+            : this(schemaVersion, batchId, createdAtUtc, documentKey, documentTitle, runData,
+                AnalysisContextRecord.FromRunData(runData), outputs)
+        {
+        }
+
+        public AnalysisBatch(
+            int schemaVersion,
+            string batchId,
+            DateTime createdAtUtc,
+            string documentKey,
+            string documentTitle,
+            AnalysisRunData runData,
+            AnalysisContextRecord context,
+            IEnumerable<DerivedOutputRecord> outputs)
         {
             if (schemaVersion <= 0) throw new ArgumentOutOfRangeException(nameof(schemaVersion));
             if (string.IsNullOrWhiteSpace(batchId)) throw new ArgumentException("批次标识不能为空。", nameof(batchId));
@@ -27,6 +41,7 @@ namespace PlugHub.ClearHeightAnalysis.Core.Models
             DocumentKey = documentKey;
             DocumentTitle = string.IsNullOrWhiteSpace(documentTitle) ? documentKey : documentTitle;
             RunData = runData ?? throw new ArgumentNullException(nameof(runData));
+            Context = context ?? throw new ArgumentNullException(nameof(context));
             Outputs = (outputs ?? throw new ArgumentNullException(nameof(outputs))).ToList().AsReadOnly();
         }
 
@@ -36,6 +51,7 @@ namespace PlugHub.ClearHeightAnalysis.Core.Models
         public string DocumentKey { get; }
         public string DocumentTitle { get; }
         public AnalysisRunData RunData { get; }
+        public AnalysisContextRecord Context { get; }
         public IReadOnlyList<DerivedOutputRecord> Outputs { get; }
 
         public static AnalysisBatch Create(string documentKey, string documentTitle, AnalysisRunData runData)
@@ -44,9 +60,15 @@ namespace PlugHub.ClearHeightAnalysis.Core.Models
                 documentKey, documentTitle, runData, Array.Empty<DerivedOutputRecord>());
         }
 
+        public static AnalysisBatch Create(string documentKey, string documentTitle, AnalysisRunData runData, AnalysisContextRecord context)
+        {
+            return new AnalysisBatch(CurrentSchemaVersion, Guid.NewGuid().ToString("N"), DateTime.UtcNow,
+                documentKey, documentTitle, runData, context, Array.Empty<DerivedOutputRecord>());
+        }
+
         public AnalysisBatch WithOutputs(IEnumerable<DerivedOutputRecord> outputs)
         {
-            return new AnalysisBatch(SchemaVersion, BatchId, CreatedAtUtc, DocumentKey, DocumentTitle, RunData, outputs);
+            return new AnalysisBatch(SchemaVersion, BatchId, CreatedAtUtc, DocumentKey, DocumentTitle, RunData, Context, outputs);
         }
     }
 }

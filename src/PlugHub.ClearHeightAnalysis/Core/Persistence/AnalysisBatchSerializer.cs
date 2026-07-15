@@ -169,6 +169,7 @@ namespace PlugHub.ClearHeightAnalysis.Core.Persistence
             [DataMember(Order = 11)] public List<ResultDto> Results = new List<ResultDto>();
             [DataMember(Order = 12)] public long CandidateVisits;
             [DataMember(Order = 13)] public List<OutputDto> Outputs = new List<OutputDto>();
+            [DataMember(Order = 14)] public ContextDto Context = new ContextDto();
 
             public static BatchDto From(AnalysisBatch batch) => new BatchDto
             {
@@ -181,7 +182,8 @@ namespace PlugHub.ClearHeightAnalysis.Core.Persistence
                 Settings = SettingsDto.From(batch.RunData.Settings),
                 Results = batch.RunData.Summary.Results.Select(ResultDto.From).ToList(),
                 CandidateVisits = batch.RunData.Summary.CandidateVisitCount,
-                Outputs = batch.Outputs.Select(OutputDto.From).ToList()
+                Outputs = batch.Outputs.Select(OutputDto.From).ToList(),
+                Context = ContextDto.From(batch.Context)
             };
 
             public AnalysisBatch ToModel()
@@ -196,8 +198,29 @@ namespace PlugHub.ClearHeightAnalysis.Core.Persistence
                 List<CellAnalysisResult> results = Results.Select(item => item.ToModel(byNumber)).ToList();
                 var run = new AnalysisRunData(request, boundary, cells, obstacles, settings, new CoreAnalysisSummary(results, CandidateVisits));
                 DateTime created = DateTime.Parse(Created, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind).ToUniversalTime();
-                return new AnalysisBatch(Version, Id, created, DocumentKey, DocumentTitle, run, Outputs.Select(item => item.ToModel()));
+                return new AnalysisBatch(Version, Id, created, DocumentKey, DocumentTitle, run, Context.ToModel(), Outputs.Select(item => item.ToModel()));
             }
+        }
+
+        [DataContract] private sealed class ContextDto
+        {
+            [DataMember(Order=1)] public string ViewId=string.Empty; [DataMember(Order=2)] public string ViewName=string.Empty;
+            [DataMember(Order=3)] public string ViewType=string.Empty; [DataMember(Order=4)] public string LevelId=string.Empty;
+            [DataMember(Order=5)] public string LevelName=string.Empty; [DataMember(Order=6)] public double LevelElevation;
+            [DataMember(Order=7)] public List<ContextSourceDto> Sources=new List<ContextSourceDto>();
+            public static ContextDto From(AnalysisContextRecord x)=>new ContextDto{ViewId=x.ViewUniqueId,ViewName=x.ViewName,ViewType=x.ViewType,
+                LevelId=x.LevelUniqueId,LevelName=x.LevelName,LevelElevation=x.LevelElevationMillimeters,Sources=x.Sources.Select(ContextSourceDto.From).ToList()};
+            public AnalysisContextRecord ToModel()=>new AnalysisContextRecord(ViewId,ViewName,ViewType,LevelId,LevelName,LevelElevation,Sources.Select(x=>x.ToModel()));
+        }
+        [DataContract] private sealed class ContextSourceDto
+        {
+            [DataMember(Order=1)] public string Key=string.Empty; [DataMember(Order=2)] public string Name=string.Empty; [DataMember(Order=3)] public bool Host;
+            [DataMember(Order=4)] public double M11; [DataMember(Order=5)] public double M12; [DataMember(Order=6)] public double M13; [DataMember(Order=7)] public double X;
+            [DataMember(Order=8)] public double M21; [DataMember(Order=9)] public double M22; [DataMember(Order=10)] public double M23; [DataMember(Order=11)] public double Y;
+            [DataMember(Order=12)] public double M31; [DataMember(Order=13)] public double M32; [DataMember(Order=14)] public double M33; [DataMember(Order=15)] public double Z;
+            public static ContextSourceDto From(AnalysisSourceContextRecord x){Transform3d t=x.Transform;return new ContextSourceDto{Key=x.Key,Name=x.DisplayName,Host=x.IsHost,
+                M11=t.M11,M12=t.M12,M13=t.M13,X=t.OffsetX,M21=t.M21,M22=t.M22,M23=t.M23,Y=t.OffsetY,M31=t.M31,M32=t.M32,M33=t.M33,Z=t.OffsetZ};}
+            public AnalysisSourceContextRecord ToModel()=>new AnalysisSourceContextRecord(Key,Name,Host,new Transform3d(M11,M12,M13,X,M21,M22,M23,Y,M31,M32,M33,Z));
         }
 
         [DataContract] private sealed class RequestDto

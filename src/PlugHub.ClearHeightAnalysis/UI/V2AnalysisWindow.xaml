@@ -53,6 +53,8 @@
             </WrapPanel>
             <TextBlock x:Name="ValidationText" Foreground="#A33" TextWrapping="Wrap" Margin="0,4,0,8"/>
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button x:Name="HistoryButton" Content="历史批次" Padding="20,8" Margin="0,0,10,0" Click="HistoryButton_Click"
+                        ToolTip="不重新分析，直接打开已保存结果"/>
                 <Button Content="取消" Padding="20,8" Margin="0,0,10,0" Click="CancelButton_Click"/>
                 <Button Content="开始分析" Padding="20,8" Background="#2B579A" Foreground="White"
                         BorderThickness="0" Click="AnalyzeButton_Click"/>

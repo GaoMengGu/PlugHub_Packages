@@ -22,6 +22,10 @@ namespace PlugHub.ClearHeightAnalysis.Tests.Core
             Assert.Equal(source.BatchId, restored.BatchId);
             Assert.Equal("document-key", restored.DocumentKey);
             Assert.Equal("示例项目", restored.DocumentTitle);
+            Assert.Equal("view-1", restored.Context.ViewUniqueId);
+            Assert.Equal("楼层平面", restored.Context.ViewType);
+            Assert.Equal(2, restored.Context.Sources.Count);
+            Assert.Equal(1234, restored.Context.Sources[1].Transform.OffsetX);
             Assert.Single(restored.RunData.Boundary.Regions);
             Assert.Single(restored.RunData.Boundary.Regions[0].Holes);
             Assert.Equal(2, restored.RunData.Cells.Count);
@@ -107,6 +111,12 @@ namespace PlugHub.ClearHeightAnalysis.Tests.Core
             };
             var runData = new AnalysisRunData(request, boundary, new[] { first, second }, new[] { obstacle }, settings, new CoreAnalysisSummary(results, 17));
             var output = new DerivedOutputRecord("output-1", DerivedOutputType.LightweightDrawing, new DateTime(2026, 7, 15, 12, 0, 0, DateTimeKind.Utc), 42, null, new[] { 101, 102 });
+            var context = new AnalysisContextRecord("view-1", "一层平面", "楼层平面", "level-1", "一层", 0, new[]
+            {
+                new AnalysisSourceContextRecord("host", "当前模型", true, Transform3d.Identity),
+                new AnalysisSourceContextRecord("link:instance-1", "链接实例 1", false,
+                    new Transform3d(1, 0, 0, 1234, 0, 1, 0, 5678, 0, 0, 1, 0))
+            });
             return new AnalysisBatch(
                 AnalysisBatch.CurrentSchemaVersion,
                 "batch-1",
@@ -114,6 +124,7 @@ namespace PlugHub.ClearHeightAnalysis.Tests.Core
                 "document-key",
                 "示例项目",
                 runData,
+                context,
                 new[] { output });
         }
 

@@ -107,6 +107,7 @@ namespace PlugHub.ClearHeightAnalysis.Revit
                     try { Load(document, id); }
                     catch (AnalysisBatchVersionException ex) { status=StoredBatchStatus.UnsupportedVersion; message=ex.Message; }
                     catch (AnalysisBatchCorruptException ex) { status=StoredBatchStatus.Corrupt; message=ex.Message; }
+                    catch (Exception ex) { status=StoredBatchStatus.Corrupt; message="批次数据损坏："+ex.Message; }
                 }
                 result.Add(new StoredBatchInfo(id, created.ToUniversalTime(), entity.Get<string>(LevelField),
                     entity.Get<int>(GridCountField), entity.Get<int>(ProblemCountField), status, message));

@@ -64,6 +64,8 @@ namespace PlugHub.ClearHeightAnalysis.Revit
                         OutputTagService.Tag(view, batch.BatchId, outputId, DerivedOutputType.AreaColorPlan);
                         ids.Add(view.Id);
                         SketchPlane plane = SketchPlane.Create(document, Plane.CreateByNormalAndOrigin(XYZ.BasisZ, new XYZ(0,0,level.Elevation)));
+                        OutputTagService.Tag(plane,batch.BatchId,outputId,DerivedOutputType.AreaColorPlan);
+                        ids.Add(plane.Id);
                         var createdSegments = new HashSet<string>(StringComparer.Ordinal);
                         foreach (AreaOutputRegion areaData in preflight.Plan.Areas)
                         {

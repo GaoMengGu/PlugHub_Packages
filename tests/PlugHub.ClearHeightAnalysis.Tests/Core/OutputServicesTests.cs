@@ -1,5 +1,7 @@
 using System;
 using System.Linq;
+using System.IO;
+using System.IO.Compression;
 using System.Text;
 using PlugHub.ClearHeightAnalysis.Core.Models;
 using PlugHub.ClearHeightAnalysis.Core.Services;
@@ -63,6 +65,25 @@ namespace PlugHub.ClearHeightAnalysis.Tests.Core
             Assert.Equal(new Rgba32(0, 0, 0, 0), raster.GetPixel(1, 0));
             Assert.Equal(new byte[] { 137, 80, 78, 71, 13, 10, 26, 10 }, png.Take(8));
             Assert.True(png.Length > 50);
+            Assert.Equal(9, DecodeImageData(png).Length);
+        }
+
+        private static byte[] DecodeImageData(byte[] png)
+        {
+            using var compressed=new MemoryStream();
+            int offset=8;
+            while(offset<png.Length)
+            {
+                int length=(png[offset]<<24)|(png[offset+1]<<16)|(png[offset+2]<<8)|png[offset+3];
+                string type=Encoding.ASCII.GetString(png,offset+4,4);
+                if(type=="IDAT")compressed.Write(png,offset+8,length);
+                offset+=12+length;
+            }
+            compressed.Position=0;
+            using var zlib=new ZLibStream(compressed,CompressionMode.Decompress);
+            using var decoded=new MemoryStream();
+            zlib.CopyTo(decoded);
+            return decoded.ToArray();
         }
 
         private static CellAnalysisResult Result(int column, int row, CellStatus status, double? height, string obstacle)

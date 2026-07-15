@@ -13,7 +13,8 @@ namespace PlugHub.ClearHeightAnalysis.UI
     {
         public V2AnalysisWindow(
             IReadOnlyList<AnalysisLevelChoice> levels,
-            IReadOnlyList<SourceModelChoice> sourceModels)
+            IReadOnlyList<SourceModelChoice> sourceModels,
+            bool hasStoredBatches = false)
         {
             InitializeComponent();
             Request = new AnalysisRequest(levels, sourceModels);
@@ -28,9 +29,17 @@ namespace PlugHub.ClearHeightAnalysis.UI
                 new BoundaryModeItem("手动矩形范围", AnalysisBoundaryMode.ManualRectangle)
             };
             BoundaryModeComboBox.SelectedIndex = 0;
+            HistoryButton.IsEnabled = hasStoredBatches;
         }
 
         public AnalysisRequest Request { get; }
+        public bool OpenHistoryRequested { get; private set; }
+
+        private void HistoryButton_Click(object sender, RoutedEventArgs e)
+        {
+            OpenHistoryRequested = true;
+            DialogResult = true;
+        }
 
         private void AnalyzeButton_Click(object sender, RoutedEventArgs e)
         {

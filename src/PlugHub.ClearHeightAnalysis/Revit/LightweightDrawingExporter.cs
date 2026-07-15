@@ -14,7 +14,7 @@ namespace PlugHub.ClearHeightAnalysis.Revit
         public DerivedOutputRecord Export(Document document, View view, AnalysisBatch batch)
         {
             if (document == null) throw new ArgumentNullException(nameof(document));
-            if (view == null || view.IsTemplate || !view.CanBePrinted)
+            if (view == null || view.IsTemplate || !view.CanBePrinted || !SupportsDetailCurves(view.ViewType))
                 throw new InvalidOperationException("请选择可打印的二维视图生成轻量成果。");
             if (batch == null) throw new ArgumentNullException(nameof(batch));
             IReadOnlyList<RiskRegion> regions = RiskRegionBuilder.Build(batch.RunData.Summary.Results);
@@ -67,6 +67,9 @@ namespace PlugHub.ClearHeightAnalysis.Revit
         }
 
         private static double GetViewElevation(View view) => view.GenLevel != null ? view.GenLevel.Elevation : view.Origin.Z;
+        private static bool SupportsDetailCurves(ViewType type) =>
+            type == ViewType.FloorPlan || type == ViewType.CeilingPlan || type == ViewType.EngineeringPlan ||
+            type == ViewType.AreaPlan || type == ViewType.DraftingView || type == ViewType.Section || type == ViewType.Elevation;
         private static XYZ ToXyz(Point2d point, double z) => new XYZ(
             Services.UnitConversion.MillimetersToFeet(point.X), Services.UnitConversion.MillimetersToFeet(point.Y), z);
 

@@ -44,5 +44,10 @@ namespace PlugHub.ClearHeightAnalysis.Core.Geometry
                 sine, cosine, 0, 0,
                 0, 0, 1, 0);
         }
+
+        public static Transform3d Identity => new Transform3d(
+            1, 0, 0, 0,
+            0, 1, 0, 0,
+            0, 0, 1, 0);
     }
 }
