@@ -60,6 +60,24 @@ namespace PlugHub.ClearHeightAnalysis.Tests.Core
             Assert.True(PolygonMath.SignedArea(clockwise) < 0);
         }
 
+        [Fact]
+        public void IntersectsRectangleReturnsFalseForRectangleInsideAConcaveGap()
+        {
+            var uShape = new PolygonLoop2d(new[]
+            {
+                new Point2d(0, 0),
+                new Point2d(3000, 0),
+                new Point2d(3000, 3000),
+                new Point2d(2000, 3000),
+                new Point2d(2000, 1000),
+                new Point2d(1000, 1000),
+                new Point2d(1000, 3000),
+                new Point2d(0, 3000)
+            });
+
+            Assert.False(PolygonMath.IntersectsRectangle(uShape, 1100, 1500, 1900, 2500));
+        }
+
         private static PolygonLoop2d Rectangle(double minX, double minY, double maxX, double maxY)
         {
             return new PolygonLoop2d(new[]
