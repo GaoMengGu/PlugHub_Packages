@@ -16,7 +16,7 @@ PlugHub Packages 是 [PlugHub](https://github.com/GaoMengGu/PlugHub) 的外部�
 | `PlugHub.DuctPreferredJunction` | 风管接头切换 | 在已选或点选风管的类型上切换风管首选连接类型。 |
 | `PlugHub.FamilyMaterialParameters` | 批量材质 | 批量打开族文件，添加材质参数并关联实体材质参数。 |
 | `PlugHub.FamilyFileSaver` | 批量保存 | 筛选当前项目中的可保存族，并批量保存到指定文件夹。 |
-| `PlugHub.ClearHeightAnalysis` | 净高分析 | 按建筑外轮廓网格分析结构和机电构件控制下的项目净高。 |
+| `PlugHub.ClearHeightAnalysis` | 净高分析 | 以持久分析批次保存宿主/链接模型净高数据；默认输出轻量轮廓，可选面积色块、PNG 和 CSV。 |
 | `PlugHub.MepTypeFilterVisibility` | 机电过滤 | 框选风管、管道或桥架后，按系统类型或设备类型创建并切换当前视图过滤器。 |
 | `PlugHub.ProjectAutoSave` | 自动保存 | 按自定义分钟间隔自动保存当前 Revit 项目文件。 |
 
