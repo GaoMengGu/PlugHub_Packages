@@ -150,21 +150,21 @@ namespace PlugHub.HubeiReportParameters
 
                 if (line.StartsWith("PropertySet:", StringComparison.Ordinal))
                 {
-                    IReadOnlyList<string> columns = SplitColumns(line);
-                    psetName = columns.Count > 1 ? columns[1] : string.Empty;
-                    ifcs = columns.Count > 3
-                        ? columns[3].Split(',').Select(value => value.Trim()).Where(value => value.Length > 0).ToList()
+                    IReadOnlyList<string> psetColumns = SplitColumns(line);
+                    psetName = psetColumns.Count > 1 ? psetColumns[1] : string.Empty;
+                    ifcs = psetColumns.Count > 3
+                        ? psetColumns[3].Split(',').Select(value => value.Trim()).Where(value => value.Length > 0).ToList()
                         : new List<string>();
                     continue;
                 }
 
-                IReadOnlyList<string> columns = SplitColumns(line);
-                if (columns.Count < 2)
+                IReadOnlyList<string> propertyColumns = SplitColumns(line);
+                if (propertyColumns.Count < 2)
                 {
                     continue;
                 }
 
-                string name = columns[0];
+                string name = propertyColumns[0];
                 if (!seen.Add(psetName + "|" + name))
                 {
                     continue;
@@ -175,7 +175,7 @@ namespace PlugHub.HubeiReportParameters
                     PsetName = psetName,
                     Name = name,
                     IfcTypeName = ifcs.Count > 0 ? string.Join(",", ifcs) : string.Empty,
-                    ParameterType = MapParameterType(columns[1]),
+                    ParameterType = MapParameterType(propertyColumns[1]),
                     Scopes = DetermineScopes(ifcs, psetName, isMini).ToArray(),
                     Source = source
                 };

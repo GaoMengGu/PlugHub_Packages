@@ -26,15 +26,15 @@ namespace PlugHub.HubeiReportParameters
 
     public sealed class HubeiReportParameterDefinition
     {
-        public string PsetName { get; set; }
+        public string PsetName { get; set; } = string.Empty;
 
-        public string Name { get; set; }
+        public string Name { get; set; } = string.Empty;
 
-        public string IfcTypeName { get; set; }
+        public string IfcTypeName { get; set; } = string.Empty;
 
         public HubeiParameterType ParameterType { get; set; }
 
-        public IReadOnlyCollection<HubeiReportScope> Scopes { get; set; }
+        public IReadOnlyCollection<HubeiReportScope> Scopes { get; set; } = new HubeiReportScope[0];
 
         public HubeiReportSource Source { get; set; }
     }
