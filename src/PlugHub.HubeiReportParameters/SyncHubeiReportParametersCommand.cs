@@ -31,7 +31,7 @@ namespace PlugHub.HubeiReportParameters
 
                 if (!selection.HasAnyScope)
                 {
-                    TaskDialog.Show("湖北报规参数", "请至少选择一个分类。\n\n可选分类：总图、单体、全局、最小报建。");
+                    TaskDialog.Show("湖北报规参数", "请至少选择一个分类。\n\n可选分类：总图、单体、全局；可勾选最小报建限定参数范围。");
                     return Result.Cancelled;
                 }
 
@@ -181,33 +181,44 @@ namespace PlugHub.HubeiReportParameters
         {
             CategorySet categorySet = document.Application.Create.NewCategorySet();
 
-            if (definition.Scopes.Contains(HubeiReportScope.Global))
+            foreach (BuiltInCategory builtInCategory in GetBindingBuiltInCategories(definition))
             {
-                AddCategory(document, categorySet, BuiltInCategory.OST_ProjectInformation);
-            }
-
-            if (definition.Scopes.Contains(HubeiReportScope.TotalPlan))
-            {
-                AddCategory(document, categorySet, BuiltInCategory.OST_Site);
-                AddCategory(document, categorySet, BuiltInCategory.OST_GenericModel);
-            }
-
-            if (definition.Scopes.Contains(HubeiReportScope.Monolithic))
-            {
-                AddCategory(document, categorySet, BuiltInCategory.OST_Levels);
-                AddCategory(document, categorySet, BuiltInCategory.OST_Rooms);
-                AddCategory(document, categorySet, BuiltInCategory.OST_Areas);
-                AddCategory(document, categorySet, BuiltInCategory.OST_MEPSpaces);
-                AddCategory(document, categorySet, BuiltInCategory.OST_Floors);
-                AddCategory(document, categorySet, BuiltInCategory.OST_Walls);
-                AddCategory(document, categorySet, BuiltInCategory.OST_Roofs);
-                AddCategory(document, categorySet, BuiltInCategory.OST_Columns);
-                AddCategory(document, categorySet, BuiltInCategory.OST_StructuralColumns);
-                AddCategory(document, categorySet, BuiltInCategory.OST_StructuralFraming);
-                AddCategory(document, categorySet, BuiltInCategory.OST_Ceilings);
+                AddCategory(document, categorySet, builtInCategory);
             }
 
             return categorySet;
+        }
+
+        private static IEnumerable<BuiltInCategory> GetBindingBuiltInCategories(HubeiReportParameterDefinition definition)
+        {
+            var categories = new List<BuiltInCategory>();
+            foreach (string ifcTypeName in definition.IfcTypeNames ?? new string[0])
+            {
+                switch (ifcTypeName)
+                {
+                    case "IfcProject":
+                    case "IfcBuilding":
+                        categories.Add(BuiltInCategory.OST_ProjectInformation);
+                        break;
+                    case "IfcSite":
+                        categories.Add(BuiltInCategory.OST_Site);
+                        break;
+                    case "IfcBuildingStorey":
+                        categories.Add(BuiltInCategory.OST_Levels);
+                        break;
+                    case "IfcSpace":
+                    case "IfcSpatialZone":
+                        categories.Add(BuiltInCategory.OST_Rooms);
+                        categories.Add(BuiltInCategory.OST_MEPSpaces);
+                        categories.Add(BuiltInCategory.OST_Areas);
+                        break;
+                    case "IfcSlab":
+                        categories.Add(BuiltInCategory.OST_Floors);
+                        break;
+                }
+            }
+
+            return categories.Distinct();
         }
 
         private static bool IsCategorySetEmpty(CategorySet categorySet)
@@ -269,35 +280,16 @@ namespace PlugHub.HubeiReportParameters
 
         private static IEnumerable<Element> CollectTargetElements(Document document, HubeiReportParameterDefinition definition)
         {
-            if (definition.Scopes.Contains(HubeiReportScope.Global))
+            HashSet<BuiltInCategory> builtInCategories = new HashSet<BuiltInCategory>(GetBindingBuiltInCategories(definition));
+            if (builtInCategories.Remove(BuiltInCategory.OST_ProjectInformation))
             {
                 yield return document.ProjectInformation;
+            }
+
+            HashSet<int> targetCategoryIds = new HashSet<int>(builtInCategories.Select(category => (int)category));
+            if (targetCategoryIds.Count == 0)
+            {
                 yield break;
-            }
-
-            var targetCategoryIds = new HashSet<int>();
-            if (definition.Scopes.Contains(HubeiReportScope.TotalPlan))
-            {
-                targetCategoryIds.Add((int)BuiltInCategory.OST_Site);
-                targetCategoryIds.Add((int)BuiltInCategory.OST_GenericModel);
-            }
-
-            if (definition.Scopes.Contains(HubeiReportScope.Monolithic))
-            {
-                targetCategoryIds.UnionWith(new[]
-                {
-                    (int)BuiltInCategory.OST_Levels,
-                    (int)BuiltInCategory.OST_Rooms,
-                    (int)BuiltInCategory.OST_Areas,
-                    (int)BuiltInCategory.OST_MEPSpaces,
-                    (int)BuiltInCategory.OST_Floors,
-                    (int)BuiltInCategory.OST_Walls,
-                    (int)BuiltInCategory.OST_Roofs,
-                    (int)BuiltInCategory.OST_Columns,
-                    (int)BuiltInCategory.OST_StructuralColumns,
-                    (int)BuiltInCategory.OST_StructuralFraming,
-                    (int)BuiltInCategory.OST_Ceilings
-                });
             }
 
             foreach (Element element in new FilteredElementCollector(document).WhereElementIsNotElementType())

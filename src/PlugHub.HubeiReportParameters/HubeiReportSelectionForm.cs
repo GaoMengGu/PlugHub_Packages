@@ -1,4 +1,3 @@
-using System;
 using System.Drawing;
 using System.Windows.Forms;
 
@@ -6,7 +5,6 @@ namespace PlugHub.HubeiReportParameters
 {
     public sealed class HubeiReportSelectionForm : Form
     {
-        private bool _suppressEvents;
         private readonly CheckBox _globalCheckBox;
         private readonly CheckBox _totalPlanCheckBox;
         private readonly CheckBox _monolithicCheckBox;
@@ -28,7 +26,7 @@ namespace PlugHub.HubeiReportParameters
             var titleLabel = new Label
             {
                 AutoSize = false,
-                Text = "选择需要创建的属性分类",
+                Text = "选择需要创建的属性分类，可用最小报建限定参数范围",
                 Location = new Point(20, 16),
                 Size = new Size(360, 24)
             };
@@ -37,7 +35,6 @@ namespace PlugHub.HubeiReportParameters
             _totalPlanCheckBox = CreateScopeCheckBox("总图", 84);
             _monolithicCheckBox = CreateScopeCheckBox("单体", 116);
             _miniCheckBox = CreateScopeCheckBox("最小报建", 148);
-            _miniCheckBox.CheckedChanged += MiniCheckBox_CheckedChanged;
 
             var defaultsGroup = new GroupBox
             {
@@ -114,50 +111,7 @@ namespace PlugHub.HubeiReportParameters
                 Checked = true
             };
 
-            checkBox.CheckedChanged += ScopeCheckBox_CheckedChanged;
             return checkBox;
-        }
-
-        private void MiniCheckBox_CheckedChanged(object sender, EventArgs e)
-        {
-            if (_suppressEvents)
-            {
-                return;
-            }
-
-            if (_miniCheckBox.Checked)
-            {
-                _suppressEvents = true;
-                _globalCheckBox.Checked = false;
-                _totalPlanCheckBox.Checked = false;
-                _monolithicCheckBox.Checked = false;
-                _suppressEvents = false;
-                return;
-            }
-
-            if (!_globalCheckBox.Checked && !_totalPlanCheckBox.Checked && !_monolithicCheckBox.Checked)
-            {
-                _suppressEvents = true;
-                _globalCheckBox.Checked = true;
-                _totalPlanCheckBox.Checked = true;
-                _monolithicCheckBox.Checked = true;
-                _suppressEvents = false;
-            }
-        }
-
-        private void ScopeCheckBox_CheckedChanged(object sender, EventArgs e)
-        {
-            if (_suppressEvents)
-            {
-                return;
-            }
-
-            if (_miniCheckBox.Checked && (ReferenceEquals(sender, _globalCheckBox) || ReferenceEquals(sender, _totalPlanCheckBox) || ReferenceEquals(sender, _monolithicCheckBox)))
-            {
-                _suppressEvents = true;
-                _miniCheckBox.Checked = false;
-                _suppressEvents = false;
-            }
         }
     }
 }

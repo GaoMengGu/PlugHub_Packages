@@ -32,6 +32,8 @@ namespace PlugHub.HubeiReportParameters
 
         public string IfcTypeName { get; set; } = string.Empty;
 
+        public IReadOnlyCollection<string> IfcTypeNames { get; set; } = new string[0];
+
         public HubeiParameterType ParameterType { get; set; }
 
         public IReadOnlyCollection<HubeiReportScope> Scopes { get; set; } = new HubeiReportScope[0];
@@ -60,7 +62,7 @@ namespace PlugHub.HubeiReportParameters
 
         public HubeiReportDefaults Defaults { get; set; } = new HubeiReportDefaults();
 
-        public bool HasAnyScope => IncludeGlobal || IncludeTotalPlan || IncludeMonolithic || IncludeMiniReport;
+        public bool HasAnyScope => IncludeGlobal || IncludeTotalPlan || IncludeMonolithic;
     }
 
     public sealed class HubeiReportResult

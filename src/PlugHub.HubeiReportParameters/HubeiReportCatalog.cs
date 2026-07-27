@@ -21,11 +21,6 @@ namespace PlugHub.HubeiReportParameters
                 return Array.Empty<HubeiReportParameterDefinition>();
             }
 
-            if (selection.IncludeMiniReport)
-            {
-                return AllDefinitions.Where(definition => definition.Source == HubeiReportSource.Mini).ToArray();
-            }
-
             var selectedScopes = new HashSet<HubeiReportScope>();
             if (selection.IncludeGlobal)
             {
@@ -42,7 +37,19 @@ namespace PlugHub.HubeiReportParameters
                 selectedScopes.Add(HubeiReportScope.Monolithic);
             }
 
-            return AllDefinitions.Where(definition => definition.Source == HubeiReportSource.Hifc && definition.Scopes.Any(selectedScopes.Contains)).ToArray();
+            return selection.IncludeMiniReport
+                ? GetScopedDefinitions(HubeiReportSource.Mini, selectedScopes)
+                : GetScopedDefinitions(HubeiReportSource.Hifc, selectedScopes);
+        }
+
+        private static IReadOnlyList<HubeiReportParameterDefinition> GetScopedDefinitions(HubeiReportSource source, IReadOnlyCollection<HubeiReportScope> selectedScopes)
+        {
+            if (selectedScopes == null || selectedScopes.Count == 0)
+            {
+                return Array.Empty<HubeiReportParameterDefinition>();
+            }
+
+            return AllDefinitions.Where(definition => definition.Source == source && definition.Scopes.Any(selectedScopes.Contains)).ToArray();
         }
 
         private static IReadOnlyList<HubeiReportParameterDefinition> LoadDefinitions()
@@ -52,13 +59,19 @@ namespace PlugHub.HubeiReportParameters
             Dictionary<string, HubeiParameterType> hifcTypes = hifcDefinitions
                 .GroupBy(definition => definition.Name, StringComparer.Ordinal)
                 .ToDictionary(group => group.Key, group => group.Select(definition => definition.ParameterType).FirstOrDefault(type => type != HubeiParameterType.Text), StringComparer.Ordinal);
+            Dictionary<string, HubeiReportParameterDefinition> hifcDefinitionsByPsetAndName = hifcDefinitions
+                .GroupBy(definition => CreatePsetNameKey(definition.PsetName, definition.Name), StringComparer.Ordinal)
+                .ToDictionary(group => group.Key, group => group.First(), StringComparer.Ordinal);
+            Dictionary<string, HubeiReportParameterDefinition> hifcDefinitionsByPset = hifcDefinitions
+                .GroupBy(definition => definition.PsetName, StringComparer.Ordinal)
+                .ToDictionary(group => group.Key, group => group.First(), StringComparer.Ordinal);
 
             foreach (var definition in hifcDefinitions)
             {
                 definitions.Add(definition);
             }
 
-            foreach (var definition in ParseMini(hifcTypes))
+            foreach (var definition in ParseMini(hifcTypes, hifcDefinitionsByPsetAndName, hifcDefinitionsByPset))
             {
                 definitions.Add(definition);
             }
@@ -79,7 +92,8 @@ namespace PlugHub.HubeiReportParameters
             {
                 PsetName = first.PsetName,
                 Name = first.Name,
-                IfcTypeName = first.IfcTypeName,
+                IfcTypeName = string.Join(",", group.SelectMany(definition => definition.IfcTypeNames).Distinct()),
+                IfcTypeNames = group.SelectMany(definition => definition.IfcTypeNames).Distinct().ToArray(),
                 ParameterType = group.Select(definition => definition.ParameterType).FirstOrDefault(type => type != HubeiParameterType.Text),
                 Scopes = group.SelectMany(definition => definition.Scopes).Distinct().ToArray(),
                 Source = first.Source
@@ -91,7 +105,7 @@ namespace PlugHub.HubeiReportParameters
             return ParseResource("HIFC.txt", HubeiReportSource.Hifc, false);
         }
 
-        private static IEnumerable<HubeiReportParameterDefinition> ParseMini(IReadOnlyDictionary<string, HubeiParameterType> hifcTypes)
+        private static IEnumerable<HubeiReportParameterDefinition> ParseMini(IReadOnlyDictionary<string, HubeiParameterType> hifcTypes, IReadOnlyDictionary<string, HubeiReportParameterDefinition> hifcDefinitionsByPsetAndName, IReadOnlyDictionary<string, HubeiReportParameterDefinition> hifcDefinitionsByPset)
         {
             string text = ReadEmbeddedText("mini.txt");
             var seen = new HashSet<string>(StringComparer.Ordinal);
@@ -117,17 +131,27 @@ namespace PlugHub.HubeiReportParameters
                     continue;
                 }
 
-                HubeiParameterType type = hifcTypes.TryGetValue(name, out HubeiParameterType hifcType) && hifcType != HubeiParameterType.Text
-                    ? hifcType
-                    : InferMiniParameterType(name);
+                HubeiReportParameterDefinition hifcDefinition = FindHifcDefinition(hifcDefinitionsByPsetAndName, psetName, name);
+                HubeiReportParameterDefinition hifcPsetDefinition = FindHifcPsetDefinition(hifcDefinitionsByPset, psetName);
+                HubeiParameterType type = hifcDefinition != null
+                    ? hifcDefinition.ParameterType
+                    : hifcTypes.TryGetValue(name, out HubeiParameterType hifcType) && hifcType != HubeiParameterType.Text
+                        ? hifcType
+                        : InferMiniParameterType(name);
+                IReadOnlyCollection<string> ifcTypeNames = hifcDefinition != null
+                    ? hifcDefinition.IfcTypeNames
+                    : hifcPsetDefinition != null
+                        ? hifcPsetDefinition.IfcTypeNames
+                        : new string[0];
 
                 yield return new HubeiReportParameterDefinition
                 {
                     PsetName = psetName,
                     Name = name,
-                    IfcTypeName = string.Empty,
+                    IfcTypeName = string.Join(",", ifcTypeNames),
+                    IfcTypeNames = ifcTypeNames,
                     ParameterType = type,
-                    Scopes = DetermineMiniScopes(psetName).ToArray(),
+                    Scopes = DetermineScopes(ifcTypeNames, psetName).Concat(new[] { HubeiReportScope.MiniReport }).Distinct().ToArray(),
                     Source = HubeiReportSource.Mini
                 };
             }
@@ -175,22 +199,34 @@ namespace PlugHub.HubeiReportParameters
                     PsetName = psetName,
                     Name = name,
                     IfcTypeName = ifcs.Count > 0 ? string.Join(",", ifcs) : string.Empty,
+                    IfcTypeNames = ifcs.ToArray(),
                     ParameterType = MapParameterType(propertyColumns[1]),
-                    Scopes = DetermineScopes(ifcs, psetName, isMini).ToArray(),
+                    Scopes = DetermineScopes(ifcs, psetName).ToArray(),
                     Source = source
                 };
             }
         }
 
-        private static IReadOnlyCollection<HubeiReportScope> DetermineScopes(IReadOnlyCollection<string> ifcs, string psetName, bool isMini)
+        private static HubeiReportParameterDefinition FindHifcDefinition(IReadOnlyDictionary<string, HubeiReportParameterDefinition> hifcDefinitionsByPsetAndName, string psetName, string name)
+        {
+            hifcDefinitionsByPsetAndName.TryGetValue(CreatePsetNameKey(psetName, name), out HubeiReportParameterDefinition definition);
+            return definition;
+        }
+
+        private static HubeiReportParameterDefinition FindHifcPsetDefinition(IReadOnlyDictionary<string, HubeiReportParameterDefinition> hifcDefinitionsByPset, string psetName)
+        {
+            hifcDefinitionsByPset.TryGetValue(psetName, out HubeiReportParameterDefinition definition);
+            return definition;
+        }
+
+        private static string CreatePsetNameKey(string psetName, string name)
+        {
+            return psetName + "|" + name;
+        }
+
+        private static IReadOnlyCollection<HubeiReportScope> DetermineScopes(IReadOnlyCollection<string> ifcs, string psetName)
         {
             var scopes = new HashSet<HubeiReportScope>();
-
-            if (isMini)
-            {
-                scopes.UnionWith(DetermineMiniScopes(psetName));
-                return scopes.ToArray();
-            }
 
             if (ifcs.Contains("IfcProject") || string.Equals(psetName, "Pset_Manifest", StringComparison.Ordinal))
             {
@@ -203,37 +239,6 @@ namespace PlugHub.HubeiReportParameters
             }
 
             if (ifcs.Contains("IfcBuilding") || ifcs.Contains("IfcBuildingStorey") || ifcs.Contains("IfcSpace") || ifcs.Contains("IfcSpatialZone") || ifcs.Contains("IfcSlab"))
-            {
-                scopes.Add(HubeiReportScope.Monolithic);
-            }
-
-            if (scopes.Count == 0)
-            {
-                scopes.Add(HubeiReportScope.Monolithic);
-            }
-
-            return scopes.ToArray();
-        }
-
-        private static IReadOnlyCollection<HubeiReportScope> DetermineMiniScopes(string psetName)
-        {
-            var scopes = new HashSet<HubeiReportScope> { HubeiReportScope.MiniReport };
-            if (psetName.IndexOf("申报", StringComparison.Ordinal) >= 0)
-            {
-                scopes.Add(HubeiReportScope.Global);
-            }
-
-            if (psetName.IndexOf("道路", StringComparison.Ordinal) >= 0 || psetName.IndexOf("绿地", StringComparison.Ordinal) >= 0 || psetName.IndexOf("规划", StringComparison.Ordinal) >= 0 || psetName.IndexOf("场地", StringComparison.Ordinal) >= 0)
-            {
-                scopes.Add(HubeiReportScope.TotalPlan);
-            }
-
-            if (psetName.IndexOf("建筑", StringComparison.Ordinal) >= 0 || psetName.IndexOf("停车", StringComparison.Ordinal) >= 0)
-            {
-                scopes.Add(HubeiReportScope.Monolithic);
-            }
-
-            if (scopes.Count == 1)
             {
                 scopes.Add(HubeiReportScope.Monolithic);
             }
