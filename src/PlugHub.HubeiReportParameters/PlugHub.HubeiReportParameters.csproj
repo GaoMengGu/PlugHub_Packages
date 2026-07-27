@@ -45,7 +45,7 @@
   </Target>
 
   <Target Name="EnsureInstalledRevitApiReferences" BeforeTargets="ResolveReferences" Condition="'$(RevitApiReferenceMode)' == 'Installed'">
-    <Error Condition="!Exists('$(RevitApiDir)\RevitAPI.dll')" Text="RevitAPI.dll not found. Pass /p:RevitApiDir=\"D:\Program Files\Autodesk\Revit 2020\"." />
-    <Error Condition="!Exists('$(RevitApiDir)\RevitAPIUI.dll')" Text="RevitAPIUI.dll not found. Pass /p:RevitApiDir=\"D:\Program Files\Autodesk\Revit 2020\"." />
+    <Error Condition="!Exists('$(RevitApiDir)\RevitAPI.dll')" Text="RevitAPI.dll not found. Pass /p:RevitApiDir=&quot;D:\Program Files\Autodesk\Revit 2020&quot;." />
+    <Error Condition="!Exists('$(RevitApiDir)\RevitAPIUI.dll')" Text="RevitAPIUI.dll not found. Pass /p:RevitApiDir=&quot;D:\Program Files\Autodesk\Revit 2020&quot;." />
   </Target>
 </Project>

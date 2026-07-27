@@ -61,6 +61,13 @@ function Validate-PlugHubContractsReferences {
     foreach ($project in $projectFiles) {
         $relativePath = [IO.Path]::GetRelativePath($Root, $project.FullName)
         $text = Get-Content -Raw -Encoding UTF8 -LiteralPath $project.FullName
+        try {
+            [xml]$null = $text
+        }
+        catch {
+            Add-Failure "$relativePath must be valid XML: $($_.Exception.Message)"
+        }
+
         if ($text -match [regex]::Escape("revittool\src\PlugHub.Contracts\PlugHub.Contracts.csproj")) {
             Add-Failure "$relativePath must not hard-code the old revittool framework directory."
         }
