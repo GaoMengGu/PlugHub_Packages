@@ -597,6 +597,30 @@ else {
             Require-FeatureIcon $feature "icons/clear-height-analysis.png"
         }
     }
+
+    $hubeiReportModule = $manifest.modules | Where-Object { $_.id -eq "plughub.modules.hubei-report-parameters" } | Select-Object -First 1
+    if ($null -eq $hubeiReportModule) {
+        Add-Failure "Missing Hubei report parameters module in packages.json"
+    }
+    else {
+        if ($hubeiReportModule.assembly -ne "dist/PlugHub.HubeiReportParameters.dll") {
+            Add-Failure "Hubei report parameters module assembly must be dist/PlugHub.HubeiReportParameters.dll"
+        }
+
+        $feature = $hubeiReportModule.features | Where-Object { $_.id -eq "plughub.modules.hubei-report-parameters.sync" } | Select-Object -First 1
+        if ($null -eq $feature) {
+            Add-Failure "Missing Hubei report parameters feature in packages.json"
+        }
+        else {
+            if ($feature.displayName -ne (ConvertFrom-Json '"\u6e56\u5317\u62a5\u89c4\u53c2\u6570"')) {
+                Add-Failure "Hubei report parameters feature displayName must match the manifest display name"
+            }
+            if ($feature.commandType -ne "PlugHub.HubeiReportParameters.SyncHubeiReportParametersCommand") {
+                Add-Failure "Hubei report parameters commandType must be PlugHub.HubeiReportParameters.SyncHubeiReportParametersCommand"
+            }
+            Require-FeatureIcon $feature "icons/hubei-report-parameters.png"
+        }
+    }
 }
 
 Require-File "src\PlugHub.GridVisibility\PlugHub.GridVisibility.csproj"
@@ -739,6 +763,22 @@ Require-File "src\PlugHub.ClearHeightAnalysis\Revit\CsvExporter.cs"
 Require-Text "src\PlugHub.ClearHeightAnalysis\Revit\RasterHeatmapExporter.cs" "ImageType.Create" "V2 single raster image type"
 Require-Text "src\PlugHub.ClearHeightAnalysis\Revit\RasterHeatmapExporter.cs" "ImageInstance.Create" "V2 single raster image instance"
 Require-Text "src\PlugHub.ClearHeightAnalysis\Revit\CsvExporter.cs" "CsvResultExporter.Export" "V2 complete CSV output"
+
+Require-File "src\PlugHub.HubeiReportParameters\PlugHub.HubeiReportParameters.csproj"
+Require-File "src\PlugHub.HubeiReportParameters\HubeiReportParametersModule.cs"
+Require-File "src\PlugHub.HubeiReportParameters\SyncHubeiReportParametersCommand.cs"
+Require-File "src\PlugHub.HubeiReportParameters\HubeiReportCatalog.cs"
+Require-File "src\PlugHub.HubeiReportParameters\Resources\HIFC.txt"
+Require-File "src\PlugHub.HubeiReportParameters\Resources\mini.txt"
+Require-Text "src\PlugHub.HubeiReportParameters\SyncHubeiReportParametersCommand.cs" "HubeiReportSelectionForm" "Hubei report parameter selection dialog"
+Require-Text "src\PlugHub.HubeiReportParameters\SyncHubeiReportParametersCommand.cs" "RemoveExistingBinding" "Hubei report parameter replacement path"
+Require-Text "src\PlugHub.HubeiReportParameters\SyncHubeiReportParametersCommand.cs" "FillDefaultValues" "Hubei report default value fill path"
+Require-Text "src\PlugHub.HubeiReportParameters\HubeiReportSelectionForm.cs" "最小报建" "Hubei report mini option"
+Require-Text "src\PlugHub.HubeiReportParameters\HubeiReportSelectionForm.cs" "默认值" "Hubei report default value inputs"
+Require-Text "src\PlugHub.HubeiReportParameters\HubeiReportCatalog.cs" "HIFC.txt" "Hubei report HIFC embedded catalog"
+Require-Text "src\PlugHub.HubeiReportParameters\HubeiReportCatalog.cs" "mini.txt" "Hubei report mini embedded catalog"
+Require-Text "build.ps1" "src\PlugHub.HubeiReportParameters\PlugHub.HubeiReportParameters.csproj" "Hubei report parameters project build registration"
+Require-Text "PlugHub_Packages.slnx" "src/PlugHub.HubeiReportParameters/PlugHub.HubeiReportParameters.csproj" "Hubei report parameters solution registration"
 
 Require-File "src\PlugHub.MepTypeFilterVisibility\PlugHub.MepTypeFilterVisibility.csproj"
 Require-File "src\PlugHub.MepTypeFilterVisibility\MepTypeFilterVisibilityModule.cs"

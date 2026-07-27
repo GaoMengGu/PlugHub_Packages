@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.1",
-  "indexVersion": "V1.0.9",
+  "indexVersion": "V1.1.0",
   "revitVersions": [
     "2020"
   ],
@@ -172,6 +172,33 @@
           "description": "分析真实边界内的结构与机电净高，默认生成轻量问题轮廓，可选面积色块、PNG 总览和 CSV。",
           "iconPath": "icons/clear-height-analysis.png",
           "commandType": "PlugHub.ClearHeightAnalysis.ClearHeightAnalysisCommand"
+        }
+      ]
+    },
+    {
+      "id": "plughub.modules.hubei-report-parameters",
+      "version": "V1.0.0",
+      "author": "GAOMENGGU",
+      "displayName": "土建工具",
+      "description": "按湖北报规清单批量创建总图、单体、全局和最小报建共享参数。",
+      "assembly": "dist/PlugHub.HubeiReportParameters.dll",
+      "category": "civil",
+      "tags": [
+        "civil",
+        "hubei",
+        "report",
+        "planning",
+        "parameter",
+        "shared-parameter",
+        "revit-api"
+      ],
+      "features": [
+        {
+          "id": "plughub.modules.hubei-report-parameters.sync",
+          "displayName": "湖北报规参数",
+          "description": "按总图、单体、全局或最小报建分类选择属性，并在当前项目中创建对应共享参数和默认值。",
+          "iconPath": "icons/hubei-report-parameters.png",
+          "commandType": "PlugHub.HubeiReportParameters.SyncHubeiReportParametersCommand"
         }
       ]
     },
