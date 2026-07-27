@@ -5,13 +5,8 @@ namespace PlugHub.HubeiReportParameters
 {
     public sealed class HubeiReportSelectionForm : Form
     {
-        private readonly CheckBox _globalCheckBox;
-        private readonly CheckBox _totalPlanCheckBox;
-        private readonly CheckBox _monolithicCheckBox;
-        private readonly CheckBox _miniCheckBox;
-        private readonly TextBox _textDefaultTextBox;
-        private readonly TextBox _numberDefaultTextBox;
-        private readonly ComboBox _yesNoDefaultComboBox;
+        private readonly TextBox _templatePathTextBox;
+        private readonly CheckBox _removeExistingParametersCheckBox;
 
         public HubeiReportSelectionForm()
         {
@@ -20,98 +15,61 @@ namespace PlugHub.HubeiReportParameters
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
             MinimizeBox = false;
-            ClientSize = new Size(480, 340);
+            ClientSize = new Size(620, 176);
             Font = new Font("Microsoft YaHei UI", 10F, FontStyle.Regular, GraphicsUnit.Point, 0);
 
-            var titleLabel = new Label
+            var instructionLabel = new Label
             {
                 AutoSize = false,
-                Text = "选择需要创建的属性分类，可用最小报建限定参数范围",
+                Text = "选择 CSV 模板，插件将按模板创建共享参数并生成项目 HIFC 映射文件。",
                 Location = new Point(20, 16),
-                Size = new Size(360, 24)
+                Size = new Size(570, 28)
             };
 
-            _globalCheckBox = CreateScopeCheckBox("全局", 52);
-            _totalPlanCheckBox = CreateScopeCheckBox("总图", 84);
-            _monolithicCheckBox = CreateScopeCheckBox("单体", 116);
-            _miniCheckBox = CreateScopeCheckBox("最小报建", 148);
+            var templateLabel = new Label { AutoSize = true, Text = "模板文件", Location = new Point(20, 57) };
+            _templatePathTextBox = new TextBox { Location = new Point(92, 53), Size = new Size(410, 26), ReadOnly = true };
+            var browseButton = new Button { Text = "选择...", Location = new Point(514, 52), Size = new Size(80, 29) };
+            browseButton.Click += SelectTemplate;
 
-            var defaultsGroup = new GroupBox
+            _removeExistingParametersCheckBox = new CheckBox
             {
-                Text = "默认值",
-                Location = new Point(20, 182),
-                Size = new Size(440, 108)
+                AutoSize = true,
+                Text = "清除当前项目同名参数",
+                Location = new Point(20, 96)
             };
 
-            var textLabel = new Label { AutoSize = true, Text = "文字", Location = new Point(18, 31) };
-            _textDefaultTextBox = new TextBox { Text = "其他", Location = new Point(70, 27), Size = new Size(110, 26) };
-
-            var numberLabel = new Label { AutoSize = true, Text = "数值", Location = new Point(200, 31) };
-            _numberDefaultTextBox = new TextBox { Text = "0", Location = new Point(252, 27), Size = new Size(80, 26) };
-
-            var yesNoLabel = new Label { AutoSize = true, Text = "布尔", Location = new Point(18, 66) };
-            _yesNoDefaultComboBox = new ComboBox
-            {
-                DropDownStyle = ComboBoxStyle.DropDownList,
-                Location = new Point(70, 62),
-                Size = new Size(80, 26)
-            };
-            _yesNoDefaultComboBox.Items.AddRange(new object[] { "否", "是" });
-            _yesNoDefaultComboBox.SelectedIndex = 0;
-
-            defaultsGroup.Controls.Add(textLabel);
-            defaultsGroup.Controls.Add(_textDefaultTextBox);
-            defaultsGroup.Controls.Add(numberLabel);
-            defaultsGroup.Controls.Add(_numberDefaultTextBox);
-            defaultsGroup.Controls.Add(yesNoLabel);
-            defaultsGroup.Controls.Add(_yesNoDefaultComboBox);
-
-            var okButton = new Button { Text = "确定", DialogResult = DialogResult.OK, Location = new Point(290, 302), Size = new Size(80, 30) };
-            var cancelButton = new Button { Text = "取消", DialogResult = DialogResult.Cancel, Location = new Point(380, 302), Size = new Size(80, 30) };
+            var okButton = new Button { Text = "执行", DialogResult = DialogResult.OK, Location = new Point(424, 132), Size = new Size(80, 30) };
+            var cancelButton = new Button { Text = "取消", DialogResult = DialogResult.Cancel, Location = new Point(514, 132), Size = new Size(80, 30) };
 
             AcceptButton = okButton;
             CancelButton = cancelButton;
-
-            Controls.Add(titleLabel);
-            Controls.Add(_globalCheckBox);
-            Controls.Add(_totalPlanCheckBox);
-            Controls.Add(_monolithicCheckBox);
-            Controls.Add(_miniCheckBox);
-            Controls.Add(defaultsGroup);
+            Controls.Add(instructionLabel);
+            Controls.Add(templateLabel);
+            Controls.Add(_templatePathTextBox);
+            Controls.Add(browseButton);
+            Controls.Add(_removeExistingParametersCheckBox);
             Controls.Add(okButton);
             Controls.Add(cancelButton);
-
-            _globalCheckBox.Checked = true;
-            _totalPlanCheckBox.Checked = true;
-            _monolithicCheckBox.Checked = true;
-            _miniCheckBox.Checked = false;
         }
 
         public HubeiReportSelection Selection => new HubeiReportSelection
         {
-            IncludeGlobal = _globalCheckBox.Checked,
-            IncludeTotalPlan = _totalPlanCheckBox.Checked,
-            IncludeMonolithic = _monolithicCheckBox.Checked,
-            IncludeMiniReport = _miniCheckBox.Checked,
-            Defaults = new HubeiReportDefaults
-            {
-                TextValue = string.IsNullOrWhiteSpace(_textDefaultTextBox.Text) ? "其他" : _textDefaultTextBox.Text,
-                NumberValue = string.IsNullOrWhiteSpace(_numberDefaultTextBox.Text) ? "0" : _numberDefaultTextBox.Text,
-                YesNoValue = _yesNoDefaultComboBox.SelectedIndex == 1
-            }
+            TemplatePath = _templatePathTextBox.Text,
+            RemoveExistingParameters = _removeExistingParametersCheckBox.Checked
         };
 
-        private CheckBox CreateScopeCheckBox(string text, int top)
+        private void SelectTemplate(object sender, System.EventArgs eventArgs)
         {
-            var checkBox = new CheckBox
+            using (var dialog = new OpenFileDialog())
             {
-                Text = text,
-                AutoSize = true,
-                Location = new Point(24, top),
-                Checked = true
-            };
-
-            return checkBox;
+                dialog.Filter = "CSV 模板 (*.csv)|*.csv|所有文件 (*.*)|*.*";
+                dialog.Title = "选择湖北报规参数模板";
+                dialog.Multiselect = false;
+                if (dialog.ShowDialog(this) == DialogResult.OK)
+                {
+                    _templatePathTextBox.Text = dialog.FileName;
+                }
+            }
         }
     }
 }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Windows.Forms;
 using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB;
@@ -29,22 +30,18 @@ namespace PlugHub.HubeiReportParameters
                     return Result.Cancelled;
                 }
 
-                if (!selection.HasAnyScope)
+                HubeiReportTemplate template = HubeiReportTemplateReader.Read(selection.TemplatePath);
+                if (!ConfirmMergedParameters(template))
                 {
-                    TaskDialog.Show("湖北报规参数", "请至少选择一个分类。\n\n可选分类：总图、单体、全局；可勾选最小报建限定参数范围。");
-                    return Result.Cancelled;
-                }
-
-                IReadOnlyList<HubeiReportParameterDefinition> definitions = HubeiReportCatalog.GetDefinitions(selection);
-                if (definitions.Count == 0)
-                {
-                    TaskDialog.Show("湖北报规参数", "所选分类没有可创建的属性。");
                     return Result.Cancelled;
                 }
 
                 Document document = commandData.Application.ActiveUIDocument.Document;
-                HubeiReportResult result = ApplyDefinitions(document, definitions, selection.Defaults);
-                ShowResult(result, definitions.Count);
+                EnsureSavedProject(document);
+                IReadOnlyList<HubeiReportTemplateRow> definitions = HubeiReportTemplateReader.MergeParameterRows(template.Rows);
+                HubeiReportResult result = ApplyDefinitions(document, definitions, selection.RemoveExistingParameters);
+                string hifcPath = WriteHifcFile(document, template.Rows);
+                ShowResult(result, definitions.Count, hifcPath);
                 return Result.Succeeded;
             }
             catch (Exception ex)
@@ -62,15 +59,38 @@ namespace PlugHub.HubeiReportParameters
             }
         }
 
-        private static HubeiReportResult ApplyDefinitions(Document document, IReadOnlyList<HubeiReportParameterDefinition> definitions, HubeiReportDefaults defaults)
+        private static bool ConfirmMergedParameters(HubeiReportTemplate template)
+        {
+            string[] duplicateNames = template.Rows.GroupBy(row => row.Name, StringComparer.Ordinal)
+                .Where(group => group.Count() > 1)
+                .Select(group => group.Key)
+                .OrderBy(name => name, StringComparer.Ordinal)
+                .ToArray();
+            if (duplicateNames.Length == 0)
+            {
+                return true;
+            }
+
+            string message = "以下同名参数将合并其 Revit构件绑定：\n" + string.Join("、", duplicateNames) + "\n\n是否继续？";
+            return TaskDialog.Show("湖北报规参数", message, TaskDialogCommonButtons.Yes | TaskDialogCommonButtons.No) == TaskDialogResult.Yes;
+        }
+
+        private static void EnsureSavedProject(Document document)
+        {
+            if (document == null || string.IsNullOrWhiteSpace(document.PathName))
+            {
+                throw new InvalidOperationException("请先保存当前 Revit 项目，以便生成 项目名-HIFC.txt。");
+            }
+        }
+
+        private static HubeiReportResult ApplyDefinitions(Document document, IReadOnlyList<HubeiReportTemplateRow> definitions, bool removeExistingParameters)
         {
             var result = new HubeiReportResult();
             string sharedFilePath = Path.Combine(Path.GetTempPath(), "PlugHub.HubeiReportParameters.shared");
-            File.WriteAllText(sharedFilePath, CreateSharedParameterTemplate());
+            File.WriteAllText(sharedFilePath, CreateSharedParameterTemplate(), new UTF8Encoding(false));
 
             string originalSharedParameterPath = document.Application.SharedParametersFilename;
             document.Application.SharedParametersFilename = sharedFilePath;
-
             try
             {
                 DefinitionFile definitionFile = document.Application.OpenSharedParameterFile();
@@ -79,47 +99,24 @@ namespace PlugHub.HubeiReportParameters
                     throw new InvalidOperationException("无法打开共享参数文件。");
                 }
 
-                DefinitionGroup group = GetOrCreateGroup(definitionFile, "PlugHub_HubeiReport");
-
-                using (Transaction transaction = new Transaction(document, "湖北报规共享参数同步"))
+                DefinitionGroup group = definitionFile.Groups.get_Item("PlugHub_HubeiReport") ?? definitionFile.Groups.Create("PlugHub_HubeiReport");
+                using (var transaction = new Transaction(document, "湖北报规模板参数同步"))
                 {
                     transaction.Start();
-
-                    foreach (HubeiReportParameterDefinition definition in definitions)
+                    foreach (HubeiReportTemplateRow definition in definitions)
                     {
-                        RemoveExistingBinding(document, definition.Name, out bool removed);
-                        if (removed)
-                        {
-                            result.RemovedCount++;
-                        }
-
-                        ExternalDefinition externalDefinition = GetOrCreateDefinition(group, definition.Name, MapParameterType(definition.ParameterType));
-                        CategorySet categories = GetBindingCategories(document, definition);
-                        if (IsCategorySetEmpty(categories))
-                        {
-                            result.SkippedDefinitions.Add(definition.Name);
-                            continue;
-                        }
-
-                        InstanceBinding binding = document.Application.Create.NewInstanceBinding(categories);
-                        if (!document.ParameterBindings.Insert(externalDefinition, binding, BuiltInParameterGroup.PG_DATA))
-                        {
-                            document.ParameterBindings.ReInsert(externalDefinition, binding, BuiltInParameterGroup.PG_DATA);
-                        }
-
-                        result.AddedCount++;
+                        ApplyDefinition(document, group, definition, removeExistingParameters, result);
                     }
 
                     transaction.Commit();
                 }
 
-                using (Transaction transaction = new Transaction(document, "湖北报规默认值填充"))
+                using (var transaction = new Transaction(document, "湖北报规模板参数赋值"))
                 {
                     transaction.Start();
-
-                    foreach (HubeiReportParameterDefinition definition in definitions)
+                    foreach (HubeiReportTemplateRow definition in definitions)
                     {
-                        result.DefaultValueCount += FillDefaultValues(document, definition, defaults);
+                        FillValues(document, definition, result);
                     }
 
                     transaction.Commit();
@@ -133,6 +130,35 @@ namespace PlugHub.HubeiReportParameters
             return result;
         }
 
+        private static void ApplyDefinition(Document document, DefinitionGroup group, HubeiReportTemplateRow definition, bool removeExistingParameters, HubeiReportResult result)
+        {
+            Definition existingDefinition = FindExistingDefinition(document, definition.Name);
+            if (existingDefinition != null && removeExistingParameters)
+            {
+                if (!document.ParameterBindings.Remove(existingDefinition))
+                {
+                    throw new InvalidOperationException("无法清除同名参数：" + definition.Name + "。");
+                }
+
+                result.RemovedCount++;
+                existingDefinition = null;
+            }
+
+            ElementBinding existingBinding = existingDefinition == null ? null : document.ParameterBindings.get_Item(existingDefinition) as ElementBinding;
+            CategorySet categories = GetBindingCategories(document, definition.RevitCategories, existingBinding);
+            if (existingDefinition != null)
+            {
+                EnsureCompatibleExistingDefinition(existingDefinition, existingBinding, definition);
+                ReInsertBinding(document, existingDefinition, categories, definition.IsInstanceBinding);
+                result.UpdatedBindingCount++;
+                return;
+            }
+
+            ExternalDefinition externalDefinition = GetOrCreateDefinition(group, definition.Name, definition.ParameterType);
+            InsertBinding(document, externalDefinition, categories, definition.IsInstanceBinding);
+            result.CreatedCount++;
+        }
+
         private static string CreateSharedParameterTemplate()
         {
             return "# This is a Revit shared parameter file.\r\n" +
@@ -143,213 +169,228 @@ namespace PlugHub.HubeiReportParameters
                    "*PARAM\tGUID\tNAME\tDATATYPE\tDATACATEGORY\tGROUP\tVISIBLE\tDESCRIPTION\tUSERMODIFIABLE\tHIDEWHENNOVALUE\r\n";
         }
 
-        private static DefinitionGroup GetOrCreateGroup(DefinitionFile definitionFile, string groupName)
-        {
-            DefinitionGroup group = definitionFile.Groups.get_Item(groupName);
-            return group ?? definitionFile.Groups.Create(groupName);
-        }
-
         private static ExternalDefinition GetOrCreateDefinition(DefinitionGroup group, string name, ParameterType parameterType)
         {
             Definition existing = group.Definitions.get_Item(name);
             if (existing is ExternalDefinition externalDefinition)
             {
+                if (externalDefinition.ParameterType != parameterType)
+                {
+                    throw new InvalidOperationException("共享参数 " + name + " 的属性类型与模板不一致。");
+                }
+
                 return externalDefinition;
             }
 
-            return (ExternalDefinition)group.Definitions.Create(new ExternalDefinitionCreationOptions(name, parameterType)
-            {
-                Visible = true
-            });
+            return (ExternalDefinition)group.Definitions.Create(new ExternalDefinitionCreationOptions(name, parameterType) { Visible = true });
         }
 
-        private static void RemoveExistingBinding(Document document, string name, out bool removed)
+        private static Definition FindExistingDefinition(Document document, string name)
         {
-            removed = false;
-            var iterator = document.ParameterBindings.ForwardIterator();
+            DefinitionBindingMapIterator iterator = document.ParameterBindings.ForwardIterator();
             while (iterator.MoveNext())
             {
                 if (iterator.Key != null && string.Equals(iterator.Key.Name, name, StringComparison.Ordinal))
                 {
-                    removed = document.ParameterBindings.Remove(iterator.Key);
-                    return;
+                    return iterator.Key;
                 }
+            }
+
+            return null;
+        }
+
+        private static void EnsureCompatibleExistingDefinition(Definition existingDefinition, ElementBinding existingBinding, HubeiReportTemplateRow definition)
+        {
+            if (existingBinding == null)
+            {
+                throw new InvalidOperationException("同名参数 " + definition.Name + " 的绑定类型不受支持。请勾选清除当前项目同名参数后重试。");
+            }
+
+            if (existingDefinition.ParameterType != definition.ParameterType)
+            {
+                throw new InvalidOperationException("同名参数 " + definition.Name + " 的属性类型与模板不一致。请勾选清除当前项目同名参数后重试。");
+            }
+
+            bool isInstanceBinding = existingBinding is InstanceBinding;
+            if (isInstanceBinding != definition.IsInstanceBinding)
+            {
+                throw new InvalidOperationException("同名参数 " + definition.Name + " 的 I/T 类型与模板不一致。请勾选清除当前项目同名参数后重试。");
             }
         }
 
-        private static CategorySet GetBindingCategories(Document document, HubeiReportParameterDefinition definition)
+        private static CategorySet GetBindingCategories(Document document, IReadOnlyCollection<BuiltInCategory> requestedCategories, ElementBinding existingBinding)
         {
             CategorySet categorySet = document.Application.Create.NewCategorySet();
-
-            foreach (BuiltInCategory builtInCategory in GetBindingBuiltInCategories(definition))
+            if (existingBinding != null)
             {
-                AddCategory(document, categorySet, builtInCategory);
+                foreach (Category category in existingBinding.Categories)
+                {
+                    categorySet.Insert(category);
+                }
+            }
+
+            foreach (BuiltInCategory builtInCategory in requestedCategories)
+            {
+                Category category = document.Settings.Categories.get_Item(builtInCategory);
+                if (category == null || !category.AllowsBoundParameters)
+                {
+                    throw new InvalidOperationException("Revit 类别不支持共享参数绑定：" + builtInCategory + "。");
+                }
+
+                if (!categorySet.Contains(category))
+                {
+                    categorySet.Insert(category);
+                }
             }
 
             return categorySet;
         }
 
-        private static IEnumerable<BuiltInCategory> GetBindingBuiltInCategories(HubeiReportParameterDefinition definition)
+        private static void InsertBinding(Document document, Definition definition, CategorySet categories, bool isInstanceBinding)
         {
-            var categories = new List<BuiltInCategory>();
-            foreach (string ifcTypeName in definition.IfcTypeNames ?? new string[0])
+            ElementBinding binding = isInstanceBinding
+                ? (ElementBinding)document.Application.Create.NewInstanceBinding(categories)
+                : document.Application.Create.NewTypeBinding(categories);
+            if (!document.ParameterBindings.Insert(definition, binding, BuiltInParameterGroup.PG_DATA))
             {
-                switch (ifcTypeName)
-                {
-                    case "IfcProject":
-                    case "IfcBuilding":
-                        categories.Add(BuiltInCategory.OST_ProjectInformation);
-                        break;
-                    case "IfcSite":
-                        categories.Add(BuiltInCategory.OST_Site);
-                        break;
-                    case "IfcBuildingStorey":
-                        categories.Add(BuiltInCategory.OST_Levels);
-                        break;
-                    case "IfcSpace":
-                    case "IfcSpatialZone":
-                        categories.Add(BuiltInCategory.OST_Rooms);
-                        categories.Add(BuiltInCategory.OST_MEPSpaces);
-                        categories.Add(BuiltInCategory.OST_Areas);
-                        break;
-                    case "IfcSlab":
-                        categories.Add(BuiltInCategory.OST_Floors);
-                        break;
-                }
-            }
-
-            return categories.Distinct();
-        }
-
-        private static bool IsCategorySetEmpty(CategorySet categorySet)
-        {
-            foreach (Category _ in categorySet)
-            {
-                return false;
-            }
-
-            return true;
-        }
-
-        private static void AddCategory(Document document, CategorySet categorySet, BuiltInCategory builtInCategory)
-        {
-            Category category = document.Settings.Categories.get_Item(builtInCategory);
-            if (category != null && !categorySet.Contains(category))
-            {
-                categorySet.Insert(category);
+                throw new InvalidOperationException("无法创建共享参数绑定：" + definition.Name + "。");
             }
         }
 
-        private static ParameterType MapParameterType(HubeiParameterType parameterType)
+        private static void ReInsertBinding(Document document, Definition definition, CategorySet categories, bool isInstanceBinding)
         {
-            switch (parameterType)
+            ElementBinding binding = isInstanceBinding
+                ? (ElementBinding)document.Application.Create.NewInstanceBinding(categories)
+                : document.Application.Create.NewTypeBinding(categories);
+            if (!document.ParameterBindings.ReInsert(definition, binding, BuiltInParameterGroup.PG_DATA))
             {
-                case HubeiParameterType.Integer:
-                    return ParameterType.Integer;
-                case HubeiParameterType.Number:
-                    return ParameterType.Number;
-                case HubeiParameterType.YesNo:
-                    return ParameterType.YesNo;
-                case HubeiParameterType.Text:
-                default:
-                    return ParameterType.Text;
+                throw new InvalidOperationException("无法更新共享参数绑定：" + definition.Name + "。");
             }
         }
 
-        private static int FillDefaultValues(Document document, HubeiReportParameterDefinition definition, HubeiReportDefaults defaults)
+        private static void FillValues(Document document, HubeiReportTemplateRow definition, HubeiReportResult result)
         {
-            int updatedCount = 0;
-            IEnumerable<Element> elements = CollectTargetElements(document, definition);
-
-            foreach (Element element in elements)
+            bool hasActualValue = !string.IsNullOrWhiteSpace(definition.ActualValue);
+            foreach (Element element in CollectTargetElements(document, definition))
             {
                 Parameter parameter = element.LookupParameter(definition.Name);
-                if (parameter == null || parameter.IsReadOnly)
+                if (parameter == null || parameter.IsReadOnly || !TrySetValue(parameter, definition.Value))
                 {
+                    result.SkippedValueCount++;
                     continue;
                 }
 
-                if (TrySetDefault(parameter, definition.ParameterType, defaults))
+                if (hasActualValue)
                 {
-                    updatedCount++;
+                    result.ActualValueCount++;
+                }
+                else
+                {
+                    result.DefaultValueCount++;
                 }
             }
-
-            return updatedCount;
         }
 
-        private static IEnumerable<Element> CollectTargetElements(Document document, HubeiReportParameterDefinition definition)
+        private static IEnumerable<Element> CollectTargetElements(Document document, HubeiReportTemplateRow definition)
         {
-            HashSet<BuiltInCategory> builtInCategories = new HashSet<BuiltInCategory>(GetBindingBuiltInCategories(definition));
-            if (builtInCategories.Remove(BuiltInCategory.OST_ProjectInformation))
+            HashSet<int> categoryIds = new HashSet<int>(definition.RevitCategories.Select(category => (int)category));
+            if (definition.IsInstanceBinding && categoryIds.Remove((int)BuiltInCategory.OST_ProjectInformation))
             {
                 yield return document.ProjectInformation;
             }
 
-            HashSet<int> targetCategoryIds = new HashSet<int>(builtInCategories.Select(category => (int)category));
-            if (targetCategoryIds.Count == 0)
+            FilteredElementCollector collector = new FilteredElementCollector(document);
+            IEnumerable<Element> elements = definition.IsInstanceBinding
+                ? collector.WhereElementIsNotElementType()
+                : collector.WhereElementIsElementType();
+            foreach (Element element in elements)
             {
-                yield break;
-            }
-
-            foreach (Element element in new FilteredElementCollector(document).WhereElementIsNotElementType())
-            {
-                if (element.Category != null && targetCategoryIds.Contains(element.Category.Id.IntegerValue))
+                if (element.Category != null && categoryIds.Contains(element.Category.Id.IntegerValue))
                 {
                     yield return element;
                 }
             }
         }
 
-        private static bool TrySetDefault(Parameter parameter, HubeiParameterType parameterType, HubeiReportDefaults defaults)
+        private static bool TrySetValue(Parameter parameter, string value)
         {
             switch (parameter.StorageType)
             {
                 case StorageType.String:
-                    return parameter.Set(defaults.TextValue ?? string.Empty);
+                    return parameter.Set(value ?? string.Empty);
                 case StorageType.Integer:
-                    if (parameterType == HubeiParameterType.YesNo)
+                    if (IsBooleanValue(value, out int booleanValue))
                     {
-                        return parameter.Set(defaults.YesNoValue ? 1 : 0);
+                        return parameter.Set(booleanValue);
                     }
 
-                    if (int.TryParse(defaults.NumberValue, out int integerValue))
-                    {
-                        return parameter.Set(integerValue);
-                    }
-
-                    return false;
+                    return int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int integerValue) && parameter.Set(integerValue);
                 case StorageType.Double:
-                    if (double.TryParse(defaults.NumberValue, NumberStyles.Float, CultureInfo.InvariantCulture, out double value))
+                    if (parameter.SetValueString(value))
                     {
-                        return parameter.Set(value);
+                        return true;
                     }
 
-                    if (double.TryParse(defaults.NumberValue, out value))
-                    {
-                        return parameter.Set(value);
-                    }
-
-                    return false;
+                    return double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out double numberValue) && parameter.Set(numberValue);
                 default:
                     return false;
             }
         }
 
-        private static void ShowResult(HubeiReportResult result, int totalDefinitions)
+        private static bool IsBooleanValue(string value, out int result)
         {
-            string message = string.Format(
-                "处理完成。\n创建: {0}\n删除同名参数: {1}\n默认值写入: {2}\n总计: {3}",
-                result.AddedCount,
-                result.RemovedCount,
-                result.DefaultValueCount,
-                totalDefinitions);
-
-            if (result.SkippedDefinitions.Count > 0)
+            if (string.Equals(value, "是", StringComparison.OrdinalIgnoreCase) || string.Equals(value, "true", StringComparison.OrdinalIgnoreCase) || value == "1")
             {
-                message += "\n\n未绑定分类的属性:\n" + string.Join("\n", result.SkippedDefinitions);
+                result = 1;
+                return true;
             }
 
+            if (string.Equals(value, "否", StringComparison.OrdinalIgnoreCase) || string.Equals(value, "false", StringComparison.OrdinalIgnoreCase) || value == "0")
+            {
+                result = 0;
+                return true;
+            }
+
+            result = 0;
+            return false;
+        }
+
+        private static string WriteHifcFile(Document document, IReadOnlyCollection<HubeiReportTemplateRow> rows)
+        {
+            string directory = Path.GetDirectoryName(document.PathName);
+            string name = Path.GetFileNameWithoutExtension(document.PathName);
+            string path = Path.Combine(directory, name + "-HIFC.txt");
+            var builder = new StringBuilder();
+            foreach (IGrouping<string, HubeiReportTemplateRow> group in rows
+                .GroupBy(row => row.PropertySetName + "|" + row.BindingKind + "|" + row.IfcEntityName, StringComparer.Ordinal)
+                .OrderBy(group => group.Key, StringComparer.Ordinal))
+            {
+                HubeiReportTemplateRow first = group.First();
+                builder.Append("PropertySet:\t").Append(first.PropertySetName).Append("\t").Append(first.BindingKind).Append("\t").Append(first.IfcEntityName).AppendLine();
+                foreach (HubeiReportTemplateRow row in group.OrderBy(row => row.Name, StringComparer.Ordinal))
+                {
+                    builder.Append("    ").Append(row.Name).Append("\t").Append(row.ParameterType).Append("\t").Append(row.Name).AppendLine();
+                }
+
+                builder.AppendLine();
+            }
+
+            File.WriteAllText(path, builder.ToString(), new UTF8Encoding(true));
+            return path;
+        }
+
+        private static void ShowResult(HubeiReportResult result, int definitionCount, string hifcPath)
+        {
+            string message = string.Format(
+                "处理完成。\n创建: {0}\n更新绑定: {1}\n清除同名参数: {2}\n真实数据写入: {3}\n默认值写入: {4}\n未写入: {5}\n参数总数: {6}\nHIFC 文件: {7}",
+                result.CreatedCount,
+                result.UpdatedBindingCount,
+                result.RemovedCount,
+                result.ActualValueCount,
+                result.DefaultValueCount,
+                result.SkippedValueCount,
+                definitionCount,
+                hifcPath);
             TaskDialog.Show("湖北报规参数", message);
         }
     }

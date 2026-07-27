@@ -14,6 +14,7 @@
 
   <ItemGroup>
     <Reference Include="System.Windows.Forms" />
+    <Reference Include="Microsoft.VisualBasic" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(RevitApiReferenceMode)' == 'Installed'">
@@ -35,8 +36,6 @@
 
   <ItemGroup>
     <ProjectReference Include="$(PlugHubRoot)\src\PlugHub.Contracts\PlugHub.Contracts.csproj" />
-    <EmbeddedResource Include="Resources\HIFC.txt" />
-    <EmbeddedResource Include="Resources\mini.txt" />
   </ItemGroup>
 
   <Target Name="EnsureRevitApiReferenceMode" BeforeTargets="ResolveReferences">

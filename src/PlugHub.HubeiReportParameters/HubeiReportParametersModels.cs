@@ -1,78 +1,59 @@
 using System.Collections.Generic;
+using Autodesk.Revit.DB;
 
 namespace PlugHub.HubeiReportParameters
 {
-    public enum HubeiReportScope
+    public sealed class HubeiReportTemplateRow
     {
-        Global,
-        TotalPlan,
-        Monolithic,
-        MiniReport
-    }
+        public int RowNumber { get; set; }
 
-    public enum HubeiReportSource
-    {
-        Hifc,
-        Mini
-    }
+        public string PropertySetName { get; set; } = string.Empty;
 
-    public enum HubeiParameterType
-    {
-        Text,
-        Integer,
-        Number,
-        YesNo
-    }
+        public string BindingKind { get; set; } = string.Empty;
 
-    public sealed class HubeiReportParameterDefinition
-    {
-        public string PsetName { get; set; } = string.Empty;
+        public string IfcEntityName { get; set; } = string.Empty;
+
+        public IReadOnlyCollection<BuiltInCategory> RevitCategories { get; set; } = new BuiltInCategory[0];
 
         public string Name { get; set; } = string.Empty;
 
-        public string IfcTypeName { get; set; } = string.Empty;
+        public ParameterType ParameterType { get; set; }
 
-        public IReadOnlyCollection<string> IfcTypeNames { get; set; } = new string[0];
+        public string DefaultValue { get; set; } = string.Empty;
 
-        public HubeiParameterType ParameterType { get; set; }
+        public string ActualValue { get; set; } = string.Empty;
 
-        public IReadOnlyCollection<HubeiReportScope> Scopes { get; set; } = new HubeiReportScope[0];
+        public bool IsInstanceBinding => BindingKind == "I";
 
-        public HubeiReportSource Source { get; set; }
+        public string Value => string.IsNullOrWhiteSpace(ActualValue) ? DefaultValue : ActualValue;
     }
 
-    public sealed class HubeiReportDefaults
+    public sealed class HubeiReportTemplate
     {
-        public string TextValue { get; set; } = "其他";
+        public string FilePath { get; set; } = string.Empty;
 
-        public string NumberValue { get; set; } = "0";
-
-        public bool YesNoValue { get; set; }
+        public IReadOnlyList<HubeiReportTemplateRow> Rows { get; set; } = new HubeiReportTemplateRow[0];
     }
 
     public sealed class HubeiReportSelection
     {
-        public bool IncludeGlobal { get; set; }
+        public string TemplatePath { get; set; } = string.Empty;
 
-        public bool IncludeTotalPlan { get; set; }
-
-        public bool IncludeMonolithic { get; set; }
-
-        public bool IncludeMiniReport { get; set; }
-
-        public HubeiReportDefaults Defaults { get; set; } = new HubeiReportDefaults();
-
-        public bool HasAnyScope => IncludeGlobal || IncludeTotalPlan || IncludeMonolithic;
+        public bool RemoveExistingParameters { get; set; }
     }
 
     public sealed class HubeiReportResult
     {
+        public int CreatedCount { get; set; }
+
+        public int UpdatedBindingCount { get; set; }
+
         public int RemovedCount { get; set; }
 
-        public int AddedCount { get; set; }
+        public int ActualValueCount { get; set; }
 
         public int DefaultValueCount { get; set; }
 
-        public List<string> SkippedDefinitions { get; } = new List<string>();
+        public int SkippedValueCount { get; set; }
     }
 }

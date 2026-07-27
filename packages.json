@@ -180,7 +180,7 @@
       "version": "V1.0.0",
       "author": "GAOMENGGU",
       "displayName": "土建工具",
-      "description": "按湖北报规清单批量创建总图、单体、全局和最小报建共享参数。",
+      "description": "按用户选择的 CSV 模板创建 Revit 共享参数、写入参数值并生成 HIFC 属性集映射文件。",
       "assembly": "dist/PlugHub.HubeiReportParameters.dll",
       "category": "civil",
       "tags": [
@@ -196,7 +196,7 @@
         {
           "id": "plughub.modules.hubei-report-parameters.sync",
           "displayName": "湖北报规参数",
-          "description": "按总图、单体、全局或最小报建分类选择属性，并在当前项目中创建对应共享参数和默认值。",
+          "description": "选择 CSV 模板后创建或更新当前项目共享参数，按真实数据或默认值赋值并生成项目 HIFC 映射文件。",
           "iconPath": "icons/hubei-report-parameters.png",
           "commandType": "PlugHub.HubeiReportParameters.SyncHubeiReportParametersCommand"
         }
