@@ -16,6 +16,7 @@ PlugHub Packages 是 [PlugHub](https://github.com/GaoMengGu/PlugHub) 的外部�
 | `PlugHub.DuctPreferredJunction` | 风管接头切换 | 在已选或点选风管的类型上切换风管首选连接类型。 |
 | `PlugHub.FamilyMaterialParameters` | 批量材质 | 批量打开族文件，添加材质参数并关联实体材质参数。 |
 | `PlugHub.FamilyFileSaver` | 批量保存 | 筛选当前项目中的可保存族，并批量保存到指定文件夹。 |
+| `PlugHub.HubeiReportParameters` | 湖北报规参数 | 按用户选择的 CSV 模板创建 Revit 共享参数、写入模板数据并生成项目 HIFC 属性集映射文件。 |
 | `PlugHub.MepTypeFilterVisibility` | 机电过滤 | 框选风管、管道或桥架后，按系统类型或设备类型创建并切换当前视图过滤器。 |
 | `PlugHub.ProjectAutoSave` | 自动保存 | 按自定义分钟间隔自动保存当前 Revit 项目文件。 |
 
@@ -43,6 +44,7 @@ packages/dropins/PlugHub_Packages/
     PlugHub.DuctPreferredJunction.dll
     PlugHub.FamilyFileSaver.dll
     PlugHub.FamilyMaterialParameters.dll
+    PlugHub.HubeiReportParameters.dll
     PlugHub.GridVisibility.dll
     PlugHub.LevelVisibility.dll
     PlugHub.MepTypeFilterVisibility.dll
@@ -52,6 +54,7 @@ packages/dropins/PlugHub_Packages/
     duct-preferred-junction.png
     family-file-saver.png
     family-material-parameters.png
+    hubei-report-parameters.png
     grid-visibility.png
     level-visibility.png
     mep-type-filter-visibility.png
