@@ -39,7 +39,7 @@ namespace PlugHub.HubeiReportParameters
                 Document document = commandData.Application.ActiveUIDocument.Document;
                 EnsureSavedProject(document);
                 IReadOnlyList<HubeiReportTemplateRow> definitions = HubeiReportTemplateReader.MergeParameterRows(template.Rows);
-                HubeiReportResult result = ApplyDefinitions(document, definitions, selection.RemoveExistingParameters);
+                HubeiReportResult result = ApplyDefinitions(document, definitions, template.Rows, selection.RemoveExistingParameters);
                 string hifcPath = WriteHifcFile(document, template.Rows);
                 ShowResult(result, definitions.Count, hifcPath);
                 return Result.Succeeded;
@@ -71,7 +71,7 @@ namespace PlugHub.HubeiReportParameters
                 return true;
             }
 
-            string message = "以下同名参数将合并其 Revit构件绑定：\n" + string.Join("、", duplicateNames) + "\n\n是否继续？";
+            string message = "以下同名参数将合并其 Revit类别绑定：\n" + string.Join("、", duplicateNames) + "\n\n是否继续？";
             return TaskDialog.Show("湖北报规参数", message, TaskDialogCommonButtons.Yes | TaskDialogCommonButtons.No) == TaskDialogResult.Yes;
         }
 
@@ -83,7 +83,7 @@ namespace PlugHub.HubeiReportParameters
             }
         }
 
-        private static HubeiReportResult ApplyDefinitions(Document document, IReadOnlyList<HubeiReportTemplateRow> definitions, bool removeExistingParameters)
+        private static HubeiReportResult ApplyDefinitions(Document document, IReadOnlyList<HubeiReportTemplateRow> definitions, IReadOnlyList<HubeiReportTemplateRow> valueRows, bool removeExistingParameters)
         {
             var result = new HubeiReportResult();
             string sharedFilePath = Path.Combine(Path.GetTempPath(), "PlugHub.HubeiReportParameters.shared");
@@ -114,7 +114,7 @@ namespace PlugHub.HubeiReportParameters
                 using (var transaction = new Transaction(document, "湖北报规模板参数赋值"))
                 {
                     transaction.Start();
-                    foreach (HubeiReportTemplateRow definition in definitions)
+                    foreach (HubeiReportTemplateRow definition in valueRows)
                     {
                         FillValues(document, definition, result);
                     }
@@ -154,7 +154,7 @@ namespace PlugHub.HubeiReportParameters
                 return;
             }
 
-            ExternalDefinition externalDefinition = GetOrCreateDefinition(group, definition.Name, definition.ParameterType);
+            ExternalDefinition externalDefinition = GetOrCreateDefinition(group, definition.Name, definition.RevitParameterType);
             InsertBinding(document, externalDefinition, categories, definition.IsInstanceBinding);
             result.CreatedCount++;
         }
@@ -206,7 +206,7 @@ namespace PlugHub.HubeiReportParameters
                 throw new InvalidOperationException("同名参数 " + definition.Name + " 的绑定类型不受支持。请勾选清除当前项目同名参数后重试。");
             }
 
-            if (existingDefinition.ParameterType != definition.ParameterType)
+            if (existingDefinition.ParameterType != definition.RevitParameterType)
             {
                 throw new InvalidOperationException("同名参数 " + definition.Name + " 的属性类型与模板不一致。请勾选清除当前项目同名参数后重试。");
             }
@@ -360,22 +360,7 @@ namespace PlugHub.HubeiReportParameters
             string directory = Path.GetDirectoryName(document.PathName);
             string name = Path.GetFileNameWithoutExtension(document.PathName);
             string path = Path.Combine(directory, name + "-HIFC.txt");
-            var builder = new StringBuilder();
-            foreach (IGrouping<string, HubeiReportTemplateRow> group in rows
-                .GroupBy(row => row.PropertySetName + "|" + row.BindingKind + "|" + row.IfcEntityName, StringComparer.Ordinal)
-                .OrderBy(group => group.Key, StringComparer.Ordinal))
-            {
-                HubeiReportTemplateRow first = group.First();
-                builder.Append("PropertySet:\t").Append(first.PropertySetName).Append("\t").Append(first.BindingKind).Append("\t").Append(first.IfcEntityName).AppendLine();
-                foreach (HubeiReportTemplateRow row in group.OrderBy(row => row.Name, StringComparer.Ordinal))
-                {
-                    builder.Append("    ").Append(row.Name).Append("\t").Append(row.ParameterType).Append("\t").Append(row.Name).AppendLine();
-                }
-
-                builder.AppendLine();
-            }
-
-            File.WriteAllText(path, builder.ToString(), new UTF8Encoding(true));
+            File.WriteAllText(path, HubeiReportTemplateWriter.BuildHifcText(rows), new UTF8Encoding(true));
             return path;
         }
 

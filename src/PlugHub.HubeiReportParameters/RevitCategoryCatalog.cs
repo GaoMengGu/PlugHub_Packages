@@ -58,7 +58,7 @@ namespace PlugHub.HubeiReportParameters
             string[] names = (value ?? string.Empty).Split(',').Select(name => name.Trim()).Where(name => name.Length > 0).ToArray();
             if (names.Length == 0)
             {
-                throw new InvalidOperationException("第 " + rowNumber + " 行的 Revit构件不能为空。");
+                throw new InvalidOperationException("第 " + rowNumber + " 行的 Revit类别不能为空。");
             }
 
             var result = new List<BuiltInCategory>();
@@ -66,7 +66,7 @@ namespace PlugHub.HubeiReportParameters
             {
                 if (!Categories.TryGetValue(name, out BuiltInCategory category))
                 {
-                    throw new InvalidOperationException("第 " + rowNumber + " 行的 Revit构件不受支持：" + name + "。");
+                    throw new InvalidOperationException("第 " + rowNumber + " 行的 Revit类别不受支持：" + name + "。");
                 }
 
                 if (!result.Contains(category))

@@ -14,7 +14,6 @@
 
   <ItemGroup>
     <Reference Include="System.Windows.Forms" />
-    <Reference Include="Microsoft.VisualBasic" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(RevitApiReferenceMode)' == 'Installed'">

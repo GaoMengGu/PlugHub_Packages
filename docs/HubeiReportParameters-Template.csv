@@ -1,5 +1,5 @@
-属性集名称,参数类型,IFC构件,Revit构件,属性名称,属性类型,默认值,真实数据
-Pset_报建信息属性集,I,IfcProject,项目信息,项目名称,Text,其他,示例办公楼
-Pset_建筑技术信息属性集,I,IfcBuilding,项目信息,建筑高度,Length,0,54.6
-Pset_建筑空间信息属性集,I,IfcSpace,"房间,空间,面积",空间功能,Text,其他,住宅
-Pset_阳台信息属性集,T,IfcSlab,楼板,计算系数,Number,0,1
+属性集名称,参数类型,IFC构件,Revit类别,属性名称,IFC属性类型,Revit参数类型,默认值,真实数据
+Pset_报建信息属性集,I,IfcProject,项目信息,项目名称,Label,Text,其他,示例办公楼
+Pset_建筑技术信息属性集,I,IfcBuilding,项目信息,建筑高度,Real,Length,0,54.6
+Pset_建筑空间信息属性集,I,IfcSpace,"房间,空间,面积",空间功能,Text,Text,其他,住宅
+Pset_阳台信息属性集,T,IfcSlab,楼板,计算系数,Real,Number,0,1

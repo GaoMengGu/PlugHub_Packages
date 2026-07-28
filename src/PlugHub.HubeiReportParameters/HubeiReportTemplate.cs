@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using Autodesk.Revit.DB;
-using Microsoft.VisualBasic.FileIO;
 
 namespace PlugHub.HubeiReportParameters
 {
@@ -12,7 +11,7 @@ namespace PlugHub.HubeiReportParameters
     {
         private static readonly string[] Headers =
         {
-            "属性集名称", "参数类型", "IFC构件", "Revit构件", "属性名称", "属性类型", "默认值", "真实数据"
+            "属性集名称", "参数类型", "IFC构件", "Revit类别", "属性名称", "IFC属性类型", "Revit参数类型", "默认值", "真实数据"
         };
 
         public static HubeiReportTemplate Read(string filePath)
@@ -23,34 +22,29 @@ namespace PlugHub.HubeiReportParameters
             }
 
             var rows = new List<HubeiReportTemplateRow>();
-            using (var parser = new TextFieldParser(filePath, Encoding.UTF8, true))
+            foreach (CsvRecord record in ReadCsvRecords(filePath))
             {
-                parser.TextFieldType = FieldType.Delimited;
-                parser.SetDelimiters(",");
-                parser.HasFieldsEnclosedInQuotes = true;
-
-                string[] header = parser.ReadFields();
-                if (header == null || header.Length != Headers.Length || !header.SequenceEqual(Headers, StringComparer.Ordinal))
+                if (record.RowNumber == 1)
                 {
-                    throw new InvalidOperationException("CSV 表头必须为：" + string.Join(",", Headers));
-                }
-
-                while (!parser.EndOfData)
-                {
-                    string[] fields = parser.ReadFields();
-                    int rowNumber = checked((int)parser.LineNumber - 1);
-                    if (fields == null || fields.All(field => string.IsNullOrWhiteSpace(field)))
+                    if (record.Fields.Length != Headers.Length || !record.Fields.SequenceEqual(Headers, StringComparer.Ordinal))
                     {
-                        continue;
+                        throw new InvalidOperationException("CSV 表头必须为：" + string.Join(",", Headers));
                     }
 
-                    if (fields.Length != Headers.Length)
-                    {
-                        throw new InvalidOperationException("第 " + rowNumber + " 行必须包含 " + Headers.Length + " 列。");
-                    }
-
-                    rows.Add(CreateRow(fields, rowNumber));
+                    continue;
                 }
+
+                if (record.Fields.All(field => string.IsNullOrWhiteSpace(field)))
+                {
+                    continue;
+                }
+
+                if (record.Fields.Length != Headers.Length)
+                {
+                    throw new InvalidOperationException("第 " + record.RowNumber + " 行必须包含 " + Headers.Length + " 列。");
+                }
+
+                rows.Add(CreateRow(record.Fields, record.RowNumber));
             }
 
             if (rows.Count == 0)
@@ -76,7 +70,8 @@ namespace PlugHub.HubeiReportParameters
                         IfcEntityName = first.IfcEntityName,
                         RevitCategories = group.SelectMany(row => row.RevitCategories).Distinct().ToArray(),
                         Name = first.Name,
-                        ParameterType = first.ParameterType,
+                        IfcDataType = first.IfcDataType,
+                        RevitParameterType = first.RevitParameterType,
                         DefaultValue = first.DefaultValue,
                         ActualValue = first.ActualValue
                     };
@@ -93,10 +88,12 @@ namespace PlugHub.HubeiReportParameters
                 throw new InvalidOperationException("第 " + rowNumber + " 行的 参数类型 必须为 I 或 T。");
             }
 
-            string typeName = Required(fields[5], rowNumber, "属性类型");
-            if (!Enum.TryParse(typeName, true, out ParameterType parameterType) || !Enum.IsDefined(typeof(ParameterType), parameterType) || parameterType == ParameterType.Invalid)
+            string ifcDataType = ValidateIfcDataType(Required(fields[5], rowNumber, "IFC属性类型"), rowNumber);
+
+            string typeName = Required(fields[6], rowNumber, "Revit参数类型");
+            if (!Enum.TryParse(typeName, true, out ParameterType revitParameterType) || !Enum.IsDefined(typeof(ParameterType), revitParameterType) || revitParameterType == ParameterType.Invalid)
             {
-                throw new InvalidOperationException("第 " + rowNumber + " 行的 属性类型不是当前 Revit 支持的 ParameterType：" + typeName + "。");
+                throw new InvalidOperationException("第 " + rowNumber + " 行的 Revit参数类型不是当前 Revit 支持的 ParameterType：" + typeName + "。");
             }
 
             return new HubeiReportTemplateRow
@@ -107,9 +104,10 @@ namespace PlugHub.HubeiReportParameters
                 IfcEntityName = Required(fields[2], rowNumber, "IFC构件"),
                 RevitCategories = RevitCategoryCatalog.Parse(fields[3], rowNumber),
                 Name = Required(fields[4], rowNumber, "属性名称"),
-                ParameterType = parameterType,
-                DefaultValue = fields[6] ?? string.Empty,
-                ActualValue = fields[7] ?? string.Empty
+                IfcDataType = ifcDataType,
+                RevitParameterType = revitParameterType,
+                DefaultValue = fields[7] ?? string.Empty,
+                ActualValue = fields[8] ?? string.Empty
             };
         }
 
@@ -118,11 +116,46 @@ namespace PlugHub.HubeiReportParameters
             foreach (IGrouping<string, HubeiReportTemplateRow> group in rows.GroupBy(row => row.Name, StringComparer.Ordinal))
             {
                 HubeiReportTemplateRow first = group.First();
-                if (group.Any(row => row.BindingKind != first.BindingKind || row.ParameterType != first.ParameterType || row.DefaultValue != first.DefaultValue || row.ActualValue != first.ActualValue))
+                if (group.Any(row => row.BindingKind != first.BindingKind || row.RevitParameterType != first.RevitParameterType))
                 {
-                    throw new InvalidOperationException("同名参数 " + first.Name + " 的参数类型、属性类型、默认值和真实数据必须一致，请修改模板后重试。");
+                    throw new InvalidOperationException("同名参数 " + first.Name + " 的参数类型或 Revit参数类型不一致，请修改模板后重试。");
                 }
             }
+
+            foreach (var group in rows
+                .SelectMany(row => row.RevitCategories.Select(category => new { row, category }))
+                .GroupBy(item => item.row.Name + "|" + item.category, StringComparer.Ordinal))
+            {
+                string[] values = group.Select(item => item.row.Value).Distinct(StringComparer.Ordinal).ToArray();
+                if (values.Length > 1)
+                {
+                    HubeiReportTemplateRow first = group.First().row;
+                    throw new InvalidOperationException("同名参数 " + first.Name + " 在同一 Revit类别中存在不同的真实数据或默认值，请修改模板后重试。");
+                }
+            }
+        }
+
+        private static string ValidateIfcDataType(string value, int rowNumber)
+        {
+            string typeName = value.StartsWith("Ifc", StringComparison.OrdinalIgnoreCase) ? value.Substring(3) : value;
+            string[] supportedTypes =
+            {
+                "Acceleration", "AngularVelocity", "Area", "AreaDensity", "Boolean", "ClassificationReference", "ColorTemperature", "Count", "Currency",
+                "DynamicViscosity", "ElectricCurrent", "ElectricVoltage", "Energy", "ElectricalEfficacy", "Force", "Frequency", "HeatFluxDensity",
+                "HeatingValue", "Identifier", "Illuminance", "Integer", "IonConcentration", "IsothermalMoistureCapacity", "Label", "Length",
+                "LinearForce", "LinearMoment", "LinearStiffness", "LinearVelocity", "Logical", "LuminousFlux", "LuminousIntensity", "Mass", "MassDensity", "MassFlowRate", "MassPerLength",
+                "ModulusOfElasticity", "MoistureDiffusivity", "MomentOfInertia", "NormalisedRatio", "Numeric", "PlanarForce", "PlaneAngle",
+                "PositiveLength", "PositivePlaneAngle", "PositiveRatio", "Power", "Pressure", "Ratio", "Real", "RotationalFrequency",
+                "SoundPower", "SoundPressure", "SpecificHeatCapacity", "Text", "ThermalConductivity", "ThermalExpansionCoefficient", "ThermalResistance",
+                "ThermalTransmittance", "ThermodynamicTemperature", "Time", "Torque", "VaporPermeability", "Volume", "VolumetricFlowRate", "WarpingConstant"
+            };
+
+            if (!supportedTypes.Contains(typeName, StringComparer.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException("第 " + rowNumber + " 行的 IFC属性类型不受 IFC Exporter 支持：" + value + "。");
+            }
+
+            return supportedTypes.First(type => string.Equals(type, typeName, StringComparison.OrdinalIgnoreCase));
         }
 
         private static string Required(string value, int rowNumber, string columnName)
@@ -133,6 +166,104 @@ namespace PlugHub.HubeiReportParameters
             }
 
             return value.Trim();
+        }
+
+        private static IReadOnlyList<CsvRecord> ReadCsvRecords(string filePath)
+        {
+            string text = File.ReadAllText(filePath, Encoding.UTF8);
+            var records = new List<CsvRecord>();
+            var fields = new List<string>();
+            var field = new StringBuilder();
+            bool isQuoted = false;
+            int rowNumber = 1;
+            int recordRowNumber = 1;
+
+            for (int index = 0; index < text.Length; index++)
+            {
+                char current = text[index];
+                if (isQuoted)
+                {
+                    if (current == '"')
+                    {
+                        if (index + 1 < text.Length && text[index + 1] == '"')
+                        {
+                            field.Append('"');
+                            index++;
+                        }
+                        else
+                        {
+                            isQuoted = false;
+                        }
+                    }
+                    else
+                    {
+                        field.Append(current);
+                        if (current == '\n')
+                        {
+                            rowNumber++;
+                        }
+                    }
+
+                    continue;
+                }
+
+                if (current == '"' && field.Length == 0)
+                {
+                    isQuoted = true;
+                    continue;
+                }
+
+                if (current == ',')
+                {
+                    fields.Add(field.ToString());
+                    field.Clear();
+                    continue;
+                }
+
+                if (current == '\r' || current == '\n')
+                {
+                    if (current == '\r' && index + 1 < text.Length && text[index + 1] == '\n')
+                    {
+                        index++;
+                    }
+
+                    fields.Add(field.ToString());
+                    records.Add(new CsvRecord(recordRowNumber, fields.ToArray()));
+                    fields.Clear();
+                    field.Clear();
+                    rowNumber++;
+                    recordRowNumber = rowNumber;
+                    continue;
+                }
+
+                field.Append(current);
+            }
+
+            if (isQuoted)
+            {
+                throw new InvalidOperationException("CSV 模板存在未闭合的双引号。");
+            }
+
+            if (field.Length > 0 || fields.Count > 0)
+            {
+                fields.Add(field.ToString());
+                records.Add(new CsvRecord(recordRowNumber, fields.ToArray()));
+            }
+
+            return records;
+        }
+
+        private sealed class CsvRecord
+        {
+            public CsvRecord(int rowNumber, string[] fields)
+            {
+                RowNumber = rowNumber;
+                Fields = fields;
+            }
+
+            public int RowNumber { get; }
+
+            public string[] Fields { get; }
         }
     }
 }
