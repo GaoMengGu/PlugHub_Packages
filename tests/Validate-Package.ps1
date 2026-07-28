@@ -662,6 +662,59 @@ Require-Text "src\PlugHub.MepTypeFilterVisibility\ApplyMepTypeFilterVisibilityCo
 Require-Text "src\PlugHub.MepTypeFilterVisibility\ApplyMepTypeFilterVisibilityCommand.cs" "EndsWith(typeFilterName, StringComparison.Ordinal)" "MEP type filter prefixed name suffix comparison"
 Require-Text "build.ps1" "src\PlugHub.MepTypeFilterVisibility\PlugHub.MepTypeFilterVisibility.csproj" "MEP type filter visibility project build registration"
 Require-Text "PlugHub_Packages.slnx" "src/PlugHub.MepTypeFilterVisibility/PlugHub.MepTypeFilterVisibility.csproj" "MEP type filter visibility solution registration"
+
+$hubeiReportModule = $manifest.modules | Where-Object { $_.id -eq "plughub.modules.hubei-report-parameters" } | Select-Object -First 1
+if ($null -eq $hubeiReportModule) {
+    Add-Failure "Missing Hubei report parameters module in packages.json"
+}
+else {
+    if ($hubeiReportModule.assembly -ne "dist/PlugHub.HubeiReportParameters.dll") {
+        Add-Failure "Hubei report parameters module assembly must be dist/PlugHub.HubeiReportParameters.dll"
+    }
+
+    $feature = $hubeiReportModule.features | Where-Object { $_.id -eq "plughub.modules.hubei-report-parameters.sync" } | Select-Object -First 1
+    if ($null -eq $feature) {
+        Add-Failure "Missing Hubei report parameters feature in packages.json"
+    }
+    else {
+        if ($feature.commandType -ne "PlugHub.HubeiReportParameters.SyncHubeiReportParametersCommand") {
+            Add-Failure "Hubei report parameters commandType must be PlugHub.HubeiReportParameters.SyncHubeiReportParametersCommand"
+        }
+        Require-FeatureIcon $feature "icons/hubei-report-parameters.png"
+    }
+}
+
+Require-File "src\PlugHub.HubeiReportParameters\PlugHub.HubeiReportParameters.csproj"
+Require-File "src\PlugHub.HubeiReportParameters\HubeiReportParametersModule.cs"
+Require-File "src\PlugHub.HubeiReportParameters\SyncHubeiReportParametersCommand.cs"
+Require-File "src\PlugHub.HubeiReportParameters\HubeiReportTemplate.cs"
+Require-File "src\PlugHub.HubeiReportParameters\HubeiReportTemplateWriter.cs"
+Require-File "src\PlugHub.HubeiReportParameters\RevitCategoryCatalog.cs"
+Require-File "docs\HubeiReportParameters-Template.csv"
+Require-File "docs\单体_minimal.csv"
+Require-File "docs\总图_minimal.csv"
+Require-File "tests\PlugHub.HubeiReportParameters.TemplateValidation\Program.cs"
+Require-Text "src\PlugHub.HubeiReportParameters\HubeiReportTemplate.cs" "IFC属性类型" "Hubei report IFC data type column"
+Require-Text "src\PlugHub.HubeiReportParameters\HubeiReportTemplate.cs" "Revit参数类型" "Hubei report Revit parameter type column"
+Require-Text "src\PlugHub.HubeiReportParameters\HubeiReportTemplate.cs" "RevitParameterName" "Hubei report conflict-safe Revit parameter aliases"
+Require-Text "src\PlugHub.HubeiReportParameters\HubeiReportTemplateWriter.cs" "IfcDataType" "Hubei report HIFC output IFC data type"
+Require-Text "src\PlugHub.HubeiReportParameters\HubeiReportTemplateWriter.cs" "RevitParameterName" "Hubei report HIFC Revit parameter mapping"
+Require-Text "tests\PlugHub.HubeiReportParameters.TemplateValidation\Program.cs" "Revit2020ParameterTypes" "Hubei report independent Revit 2020 template validation"
+Require-Text "src\PlugHub.HubeiReportParameters\RevitCategoryCatalog.cs" "OST_Walls" "Hubei report wall category support"
+Require-Text "src\PlugHub.HubeiReportParameters\RevitCategoryCatalog.cs" "OST_DuctCurves" "Hubei report duct category support"
+Require-Text "src\PlugHub.HubeiReportParameters\RevitCategoryCatalog.cs" "OST_PipeCurves" "Hubei report pipe category support"
+Require-Text "src\PlugHub.HubeiReportParameters\HubeiReportSelectionForm.cs" "OpenFileDialog" "Hubei report CSV template picker"
+Require-Text "src\PlugHub.HubeiReportParameters\HubeiReportSelectionForm.cs" "清除当前项目同名参数" "Hubei report remove existing option"
+Require-Text "src\PlugHub.HubeiReportParameters\SyncHubeiReportParametersCommand.cs" "-HIFC.txt" "Hubei report project HIFC output filename"
+Require-Text "src\PlugHub.HubeiReportParameters\SyncHubeiReportParametersCommand.cs" "TypeBinding" "Hubei report type parameter binding"
+Require-Text "src\PlugHub.HubeiReportParameters\SyncHubeiReportParametersCommand.cs" "ActualValue" "Hubei report real data priority"
+Reject-Text "src\PlugHub.HubeiReportParameters\HubeiReportParametersModels.cs" "HubeiReportScope" "Hubei report legacy scope model"
+Reject-Text "src\PlugHub.HubeiReportParameters\HubeiReportSelectionForm.cs" "最小报建" "Hubei report legacy mini selection"
+Reject-Text "src\PlugHub.HubeiReportParameters\HubeiReportSelectionForm.cs" "默认值" "Hubei report legacy default value inputs"
+Reject-Text "src\PlugHub.HubeiReportParameters\PlugHub.HubeiReportParameters.csproj" "Resources\HIFC.txt" "Hubei report legacy embedded HIFC resource"
+Reject-Text "src\PlugHub.HubeiReportParameters\PlugHub.HubeiReportParameters.csproj" "Resources\mini.txt" "Hubei report legacy embedded mini resource"
+Require-Text "build.ps1" "src\PlugHub.HubeiReportParameters\PlugHub.HubeiReportParameters.csproj" "Hubei report parameters project build registration"
+Require-Text "PlugHub_Packages.slnx" "src/PlugHub.HubeiReportParameters/PlugHub.HubeiReportParameters.csproj" "Hubei report parameters solution registration"
 Reject-Text "packages.json" "builtin:" "Built-in icon reference"
 Reject-Text "packages.json" "Tee/Tap" "Duct preferred junction old Tee/Tap wording"
 Require-Text ".github\workflows\build-package.yml" '$indexVersionPattern = [regex]::new(' "Root indexVersion replacement regex instance"
