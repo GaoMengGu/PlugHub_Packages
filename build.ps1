@@ -12,11 +12,9 @@ $Projects = @(
     (Join-Path $Root "src\PlugHub.DuctPreferredJunction\PlugHub.DuctPreferredJunction.csproj"),
     (Join-Path $Root "src\PlugHub.FamilyMaterialParameters\PlugHub.FamilyMaterialParameters.csproj"),
     (Join-Path $Root "src\PlugHub.FamilyFileSaver\PlugHub.FamilyFileSaver.csproj"),
-    (Join-Path $Root "src\PlugHub.HubeiReportParameters\PlugHub.HubeiReportParameters.csproj"),
     (Join-Path $Root "src\PlugHub.GridVisibility\PlugHub.GridVisibility.csproj"),
     (Join-Path $Root "src\PlugHub.LevelVisibility\PlugHub.LevelVisibility.csproj"),
     (Join-Path $Root "src\PlugHub.MepTypeFilterVisibility\PlugHub.MepTypeFilterVisibility.csproj"),
-    (Join-Path $Root "src\PlugHub.ClearHeightAnalysis\PlugHub.ClearHeightAnalysis.csproj"),
     (Join-Path $Root "src\PlugHub.ProjectAutoSave\PlugHub.ProjectAutoSave.csproj"),
     (Join-Path $Root "src\PlugHub.ReferencePlaneVisibility\PlugHub.ReferencePlaneVisibility.csproj")
 )
