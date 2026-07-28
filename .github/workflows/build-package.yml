@@ -3,9 +3,7 @@ name: Build PlugHub Package
 on:
   push:
     branches:
-      - main
-      - codex
-      - hermes
+      - "**"
     tags:
       - "V*"
   pull_request:
@@ -37,7 +35,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: GaoMengGu/PlugHub
-          path: revittool
+          path: PlugHub
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -185,7 +183,7 @@ jobs:
           Compress-Archive -Path $packageRoot -DestinationPath $env:PACKAGE_ZIP -Force
 
       - name: Commit package outputs
-        if: github.actor != 'github-actions[bot]' && github.event_name == 'push' && contains(fromJson('["refs/heads/codex","refs/heads/hermes"]'), github.ref)
+        if: github.actor != 'github-actions[bot]' && github.event_name == 'push' && github.ref_type == 'branch'
         shell: pwsh
         working-directory: PlugHub_Packages
         run: |
@@ -247,7 +245,7 @@ jobs:
   mirror-gitee:
     name: Mirror final refs and release to Gitee
     needs: build
-    if: github.event_name != 'pull_request' && github.actor != 'github-actions[bot]' && ((github.event_name == 'push' && contains(fromJson('["refs/heads/main","refs/heads/codex","refs/heads/hermes"]'), github.ref)) || (needs.build.outputs.version_tag != '' && (github.ref_type == 'tag' || github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch')))
+    if: github.event_name != 'pull_request' && github.actor != 'github-actions[bot]' && ((github.event_name == 'push' && github.ref_type == 'branch') || (needs.build.outputs.version_tag != '' && (github.ref_type == 'tag' || github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch')))
     runs-on: ubuntu-latest
 
     steps:

@@ -56,6 +56,28 @@ function Reject-Text {
     }
 }
 
+function Validate-PlugHubContractsReferences {
+    $projectFiles = Get-ChildItem -LiteralPath (Join-Path $Root "src") -Filter "*.csproj" -Recurse
+    foreach ($project in $projectFiles) {
+        $relativePath = [IO.Path]::GetRelativePath($Root, $project.FullName)
+        $text = Get-Content -Raw -Encoding UTF8 -LiteralPath $project.FullName
+        try {
+            [xml]$null = $text
+        }
+        catch {
+            Add-Failure "$relativePath must be valid XML: $($_.Exception.Message)"
+        }
+
+        if ($text -match [regex]::Escape("revittool\src\PlugHub.Contracts\PlugHub.Contracts.csproj")) {
+            Add-Failure "$relativePath must not hard-code the old revittool framework directory."
+        }
+
+        if ($text -match "PlugHub\.Contracts\.csproj" -and $text -notmatch [regex]::Escape('$(PlugHubRoot)')) {
+            Add-Failure "$relativePath must reference PlugHub.Contracts through the PlugHubRoot MSBuild property."
+        }
+    }
+}
+
 function Test-JsonProperty {
     param(
         [object]$Value,
@@ -558,6 +580,54 @@ else {
             Require-FeatureIcon $feature "icons/project-auto-save.png"
         }
     }
+
+    $clearHeightModule = $manifest.modules | Where-Object { $_.id -eq "plughub.modules.clear-height-analysis" } | Select-Object -First 1
+    if ($null -eq $clearHeightModule) {
+        Add-Failure "Missing clear height analysis module in packages.json"
+    }
+    else {
+        if ($clearHeightModule.assembly -ne "dist/PlugHub.ClearHeightAnalysis.dll") {
+            Add-Failure "Clear height analysis module assembly must be dist/PlugHub.ClearHeightAnalysis.dll"
+        }
+
+        $feature = $clearHeightModule.features | Where-Object { $_.id -eq "plughub.modules.clear-height-analysis.analyze" } | Select-Object -First 1
+        if ($null -eq $feature) {
+            Add-Failure "Missing clear height analysis feature in packages.json"
+        }
+        else {
+            if ($feature.displayName -ne (ConvertFrom-Json '"\u51c0\u9ad8\u5206\u6790"')) {
+                Add-Failure "Clear height analysis feature displayName must match the manifest display name"
+            }
+            if ($feature.commandType -ne "PlugHub.ClearHeightAnalysis.ClearHeightAnalysisCommand") {
+                Add-Failure "Clear height analysis commandType must be PlugHub.ClearHeightAnalysis.ClearHeightAnalysisCommand"
+            }
+            Require-FeatureIcon $feature "icons/clear-height-analysis.png"
+        }
+    }
+
+    $hubeiReportModule = $manifest.modules | Where-Object { $_.id -eq "plughub.modules.hubei-report-parameters" } | Select-Object -First 1
+    if ($null -eq $hubeiReportModule) {
+        Add-Failure "Missing Hubei report parameters module in packages.json"
+    }
+    else {
+        if ($hubeiReportModule.assembly -ne "dist/PlugHub.HubeiReportParameters.dll") {
+            Add-Failure "Hubei report parameters module assembly must be dist/PlugHub.HubeiReportParameters.dll"
+        }
+
+        $feature = $hubeiReportModule.features | Where-Object { $_.id -eq "plughub.modules.hubei-report-parameters.sync" } | Select-Object -First 1
+        if ($null -eq $feature) {
+            Add-Failure "Missing Hubei report parameters feature in packages.json"
+        }
+        else {
+            if ($feature.displayName -ne (ConvertFrom-Json '"\u6e56\u5317\u62a5\u89c4\u53c2\u6570"')) {
+                Add-Failure "Hubei report parameters feature displayName must match the manifest display name"
+            }
+            if ($feature.commandType -ne "PlugHub.HubeiReportParameters.SyncHubeiReportParametersCommand") {
+                Add-Failure "Hubei report parameters commandType must be PlugHub.HubeiReportParameters.SyncHubeiReportParametersCommand"
+            }
+            Require-FeatureIcon $feature "icons/hubei-report-parameters.png"
+        }
+    }
 }
 
 Require-File "src\PlugHub.GridVisibility\PlugHub.GridVisibility.csproj"
@@ -635,6 +705,109 @@ Require-MonochromeIconColor "icons\project-auto-save.png" 0x1A 0x1A 0x1A
 Require-Text "build.ps1" "src\PlugHub.ProjectAutoSave\PlugHub.ProjectAutoSave.csproj" "Project auto-save project build registration"
 Require-Text "PlugHub_Packages.slnx" "src/PlugHub.ProjectAutoSave/PlugHub.ProjectAutoSave.csproj" "Project auto-save solution registration"
 
+Require-File "src\PlugHub.ClearHeightAnalysis\PlugHub.ClearHeightAnalysis.csproj"
+Require-File "src\PlugHub.ClearHeightAnalysis\ClearHeightAnalysisModule.cs"
+Require-File "src\PlugHub.ClearHeightAnalysis\ClearHeightAnalysisCommand.cs"
+Require-Text "src\PlugHub.ClearHeightAnalysis\ClearHeightAnalysisModule.cs" "土建工具" "Clear height module business category"
+Require-Text "src\PlugHub.ClearHeightAnalysis\ClearHeightAnalysisCommand.cs" "AnalysisWorkflowController" "Clear height V2 workflow entry"
+Reject-Text "src\PlugHub.ClearHeightAnalysis\ClearHeightAnalysisCommand.cs" "BuildingOutlineProvider" "Production command must not use legacy outline provider"
+Reject-Text "src\PlugHub.ClearHeightAnalysis\ClearHeightAnalysisCommand.cs" "ClearHeightCalculator" "Production command must not use legacy calculator"
+Reject-Text "src\PlugHub.ClearHeightAnalysis\ClearHeightAnalysisCommand.cs" "HeatmapRenderer" "Production command must not use legacy filled-region renderer"
+Reject-Text "src\PlugHub.ClearHeightAnalysis\ClearHeightAnalysisCommand.cs" "HeatmapResultLimiter" "Production command must not silently truncate output"
+Require-MonochromeIconColor "icons\clear-height-analysis.png" 0x1A 0x1A 0x1A
+Require-Text "build.ps1" "src\PlugHub.ClearHeightAnalysis\PlugHub.ClearHeightAnalysis.csproj" "Clear height project build registration"
+Require-Text "PlugHub_Packages.slnx" "src/PlugHub.ClearHeightAnalysis/PlugHub.ClearHeightAnalysis.csproj" "Clear height solution registration"
+Require-File "src\PlugHub.ClearHeightAnalysis\UI\V2AnalysisWindow.xaml"
+Require-File "src\PlugHub.ClearHeightAnalysis\UI\V2AnalysisWindow.xaml.cs"
+Require-File "src\PlugHub.ClearHeightAnalysis\UI\V2ResultWindow.xaml"
+Require-File "src\PlugHub.ClearHeightAnalysis\UI\V2ResultWindow.xaml.cs"
+Require-Text "src\PlugHub.ClearHeightAnalysis\UI\V2AnalysisWindow.xaml" "选择真实楼层" "V2 real level selection guidance"
+Require-Text "src\PlugHub.ClearHeightAnalysis\UI\V2AnalysisWindow.xaml.cs" "OpenHistoryRequested" "V2 direct history access"
+Require-Text "src\PlugHub.ClearHeightAnalysis\UI\V2ResultWindow.xaml" "面积色块（可选）" "V2 optional area output"
+Require-Text "src\PlugHub.ClearHeightAnalysis\UI\V2ResultWindow.xaml" "近似" "V2 approximation warning"
+Require-Text "src\PlugHub.ClearHeightAnalysis\UI\V2ResultWindow.xaml.cs" "ResultFilter.Apply" "V2 result filters"
+Require-File "src\PlugHub.ClearHeightAnalysis\Services\UnitConversion.cs"
+Require-File "src\PlugHub.ClearHeightAnalysis\Services\ResultTagService.cs"
+Require-Text "src\PlugHub.ClearHeightAnalysis\Services\ResultTagService.cs" "Schema" "Clear height result tagging schema"
+Require-File "src\PlugHub.ClearHeightAnalysis\Revit\AnalysisWorkflowController.cs"
+Require-Text "src\PlugHub.ClearHeightAnalysis\Revit\AnalysisWorkflowController.cs" "V2AnalysisWindow" "V2 analysis settings workflow"
+Require-Text "src\PlugHub.ClearHeightAnalysis\Revit\AnalysisWorkflowController.cs" "RevitAnalysisRunner" "V2 Revit analysis runner"
+Require-Text "src\PlugHub.ClearHeightAnalysis\Revit\AnalysisWorkflowController.cs" "repository.Save" "V2 batch save before results"
+Require-Text "src\PlugHub.ClearHeightAnalysis\Revit\AnalysisWorkflowController.cs" "V2ResultWindow" "V2 result manager workflow"
+Require-Text "src\PlugHub.ClearHeightAnalysis\Revit\AnalysisWorkflowController.cs" "AnalysisContextRecord" "V2 source view and transform context"
+Require-File "src\PlugHub.ClearHeightAnalysis\Revit\RevitAnalysisRunner.cs"
+Require-File "src\PlugHub.ClearHeightAnalysis\Revit\RevitBoundaryProvider.cs"
+Require-File "src\PlugHub.ClearHeightAnalysis\Revit\RevitObstacleSnapshotCollector.cs"
+Require-Text "src\PlugHub.ClearHeightAnalysis\Revit\RevitBoundaryProvider.cs" "HostObjectUtils.GetTopFaces" "V2 true floor boundary extraction"
+Require-Text "src\PlugHub.ClearHeightAnalysis\Revit\RevitBoundaryProvider.cs" "GetEdgesAsCurveLoops" "V2 floor boundary curve loops"
+Require-Text "src\PlugHub.ClearHeightAnalysis\Revit\RevitAnalysisContextBuilder.cs" "GetTotalTransform" "V2 linked instance total transform"
+Require-Text "src\PlugHub.ClearHeightAnalysis\Revit\RevitObstacleSnapshotFactory.cs" '"link:" + source.LinkInstance!.UniqueId' "V2 link-instance-aware obstacle key"
+Require-Text "src\PlugHub.ClearHeightAnalysis\Revit\RevitObstacleSnapshotCollector.cs" "BoundingBoxIntersectsFilter" "V2 Revit-side candidate coarse filter"
+Require-Text "src\PlugHub.ClearHeightAnalysis\Revit\RevitAnalysisRunner.cs" "ClearHeightBatchAnalyzer" "V2 indexed analysis engine"
+Reject-Text "src\PlugHub.ClearHeightAnalysis\Revit\RevitAnalysisRunner.cs" "HeatmapRenderer" "V2 runner must not create filled regions"
+Require-File "src\PlugHub.ClearHeightAnalysis\Revit\AnalysisBatchRepository.cs"
+Require-File "src\PlugHub.ClearHeightAnalysis\Revit\OutputTagService.cs"
+Require-File "src\PlugHub.ClearHeightAnalysis\Revit\DerivedOutputCleanupService.cs"
+Require-Text "src\PlugHub.ClearHeightAnalysis\Revit\AnalysisBatchRepository.cs" "DataStorage" "V2 batch DataStorage persistence"
+Require-Text "src\PlugHub.ClearHeightAnalysis\Revit\AnalysisBatchRepository.cs" "AnalysisBatchSerializer.Deserialize" "V2 batch integrity validation"
+Require-Text "src\PlugHub.ClearHeightAnalysis\Revit\AnalysisBatchRepository.cs" "ChunkSequence" "V2 batch chunk sequence storage"
+Require-Text "src\PlugHub.ClearHeightAnalysis\Revit\OutputTagService.cs" "BatchId" "V2 output batch ownership tag"
+Require-Text "src\PlugHub.ClearHeightAnalysis\Revit\OutputTagService.cs" "OutputId" "V2 output instance ownership tag"
+Require-Text "src\PlugHub.ClearHeightAnalysis\Revit\DerivedOutputCleanupService.cs" "Matches" "V2 scoped derived-output cleanup"
+Require-File "src\PlugHub.ClearHeightAnalysis\Revit\LightweightDrawingExporter.cs"
+Require-Text "src\PlugHub.ClearHeightAnalysis\Revit\LightweightDrawingExporter.cs" "NewDetailCurve" "V2 lightweight detail curves"
+Require-Text "src\PlugHub.ClearHeightAnalysis\Revit\LightweightDrawingExporter.cs" "TextNote.Create" "V2 numbered region notes"
+Require-Text "src\PlugHub.ClearHeightAnalysis\Revit\LightweightDrawingExporter.cs" "OutputTagService.Tag" "V2 lightweight output ownership tags"
+Reject-Text "src\PlugHub.ClearHeightAnalysis\Revit\LightweightDrawingExporter.cs" "FilledRegion" "V2 lightweight output must not use fills"
+Require-File "src\PlugHub.ClearHeightAnalysis\Revit\AreaColorPlanExporter.cs"
+Require-Text "src\PlugHub.ClearHeightAnalysis\Revit\AreaColorPlanExporter.cs" "PH_净高分析" "V2 area scheme prerequisite"
+Require-Text "src\PlugHub.ClearHeightAnalysis\Revit\AreaColorPlanExporter.cs" "PH_净高分析_色块" "V2 area color view template prerequisite"
+Require-Text "src\PlugHub.ClearHeightAnalysis\Revit\AreaColorPlanExporter.cs" "EstimatedBoundaryLineCount" "V2 area output preflight"
+Require-Text "src\PlugHub.ClearHeightAnalysis\Revit\AreaColorPlanExporter.cs" "OutputTagService.Tag(plane" "V2 area sketch plane ownership tag"
+Reject-Text "src\PlugHub.ClearHeightAnalysis\Revit\AreaColorPlanExporter.cs" "new AreaScheme" "V2 must not create area schemes"
+Require-File "src\PlugHub.ClearHeightAnalysis\Revit\RasterHeatmapExporter.cs"
+Require-File "src\PlugHub.ClearHeightAnalysis\Revit\CsvExporter.cs"
+Require-Text "src\PlugHub.ClearHeightAnalysis\Revit\RasterHeatmapExporter.cs" "ImageType.Create" "V2 single raster image type"
+Require-Text "src\PlugHub.ClearHeightAnalysis\Revit\RasterHeatmapExporter.cs" "ImageInstance.Create" "V2 single raster image instance"
+Require-Text "src\PlugHub.ClearHeightAnalysis\Revit\CsvExporter.cs" "CsvResultExporter.Export" "V2 complete CSV output"
+
+Require-File "src\PlugHub.HubeiReportParameters\PlugHub.HubeiReportParameters.csproj"
+Require-File "src\PlugHub.HubeiReportParameters\HubeiReportParametersModule.cs"
+Require-File "src\PlugHub.HubeiReportParameters\SyncHubeiReportParametersCommand.cs"
+Require-File "src\PlugHub.HubeiReportParameters\HubeiReportTemplate.cs"
+Require-File "src\PlugHub.HubeiReportParameters\HubeiReportTemplateWriter.cs"
+Require-File "src\PlugHub.HubeiReportParameters\RevitCategoryCatalog.cs"
+Require-File "docs\HubeiReportParameters-Template.csv"
+Require-File "docs\单体_minimal.csv"
+Require-File "docs\总图_minimal.csv"
+Require-File "tests\PlugHub.HubeiReportParameters.TemplateValidation\Program.cs"
+Require-Text "src\PlugHub.HubeiReportParameters\HubeiReportTemplate.cs" "属性集名称" "Hubei report CSV template header"
+Require-Text "src\PlugHub.HubeiReportParameters\HubeiReportTemplate.cs" "IFC属性类型" "Hubei report IFC data type column"
+Require-Text "src\PlugHub.HubeiReportParameters\HubeiReportTemplate.cs" "Revit参数类型" "Hubei report Revit parameter type column"
+Require-Text "src\PlugHub.HubeiReportParameters\HubeiReportTemplate.cs" "ReadCsvRecords" "Hubei report built-in CSV parsing"
+Require-Text "src\PlugHub.HubeiReportParameters\HubeiReportTemplate.cs" "SelectMany(row => row.RevitCategories" "Hubei report same-name category value validation"
+Require-Text "src\PlugHub.HubeiReportParameters\HubeiReportTemplate.cs" "RevitParameterName" "Hubei report conflict-safe Revit parameter aliases"
+Require-Text "src\PlugHub.HubeiReportParameters\HubeiReportTemplateWriter.cs" "IfcDataType" "Hubei report HIFC output IFC data type"
+Require-Text "src\PlugHub.HubeiReportParameters\HubeiReportTemplateWriter.cs" "RevitParameterName" "Hubei report HIFC Revit parameter mapping"
+Require-Text "tests\PlugHub.HubeiReportParameters.TemplateValidation\Program.cs" "Revit2020ParameterTypes" "Hubei report independent Revit 2020 template validation"
+Require-Text "tests\PlugHub.HubeiReportParameters.TemplateValidation\Program.cs" "BuildHifcText" "Hubei report independent HIFC template validation"
+Require-Text "src\PlugHub.HubeiReportParameters\RevitCategoryCatalog.cs" "OST_Walls" "Hubei report wall category support"
+Require-Text "src\PlugHub.HubeiReportParameters\RevitCategoryCatalog.cs" "OST_DuctCurves" "Hubei report duct category support"
+Require-Text "src\PlugHub.HubeiReportParameters\RevitCategoryCatalog.cs" "OST_PipeCurves" "Hubei report pipe category support"
+Require-Text "src\PlugHub.HubeiReportParameters\HubeiReportSelectionForm.cs" "OpenFileDialog" "Hubei report CSV template picker"
+Require-Text "src\PlugHub.HubeiReportParameters\HubeiReportSelectionForm.cs" "清除当前项目同名参数" "Hubei report remove existing option"
+Require-Text "src\PlugHub.HubeiReportParameters\SyncHubeiReportParametersCommand.cs" "-HIFC.txt" "Hubei report project HIFC output filename"
+Require-Text "src\PlugHub.HubeiReportParameters\SyncHubeiReportParametersCommand.cs" "TypeBinding" "Hubei report type parameter binding"
+Require-Text "src\PlugHub.HubeiReportParameters\SyncHubeiReportParametersCommand.cs" "ActualValue" "Hubei report real data priority"
+Require-Text "src\PlugHub.HubeiReportParameters\SyncHubeiReportParametersCommand.cs" "valueRows" "Hubei report per-row value assignment"
+Reject-Text "src\PlugHub.HubeiReportParameters\HubeiReportParametersModels.cs" "HubeiReportScope" "Hubei report legacy scope model"
+Reject-Text "src\PlugHub.HubeiReportParameters\HubeiReportSelectionForm.cs" "最小报建" "Hubei report legacy mini selection"
+Reject-Text "src\PlugHub.HubeiReportParameters\HubeiReportSelectionForm.cs" "默认值" "Hubei report legacy default value inputs"
+Reject-Text "src\PlugHub.HubeiReportParameters\PlugHub.HubeiReportParameters.csproj" "Resources\HIFC.txt" "Hubei report legacy embedded HIFC resource"
+Reject-Text "src\PlugHub.HubeiReportParameters\PlugHub.HubeiReportParameters.csproj" "Resources\mini.txt" "Hubei report legacy embedded mini resource"
+Require-Text "build.ps1" "src\PlugHub.HubeiReportParameters\PlugHub.HubeiReportParameters.csproj" "Hubei report parameters project build registration"
+Require-Text "PlugHub_Packages.slnx" "src/PlugHub.HubeiReportParameters/PlugHub.HubeiReportParameters.csproj" "Hubei report parameters solution registration"
+
 Require-File "src\PlugHub.MepTypeFilterVisibility\PlugHub.MepTypeFilterVisibility.csproj"
 Require-File "src\PlugHub.MepTypeFilterVisibility\MepTypeFilterVisibilityModule.cs"
 Require-File "src\PlugHub.MepTypeFilterVisibility\ApplyMepTypeFilterVisibilityCommand.cs"
@@ -662,14 +835,19 @@ Require-Text "src\PlugHub.MepTypeFilterVisibility\ApplyMepTypeFilterVisibilityCo
 Require-Text "src\PlugHub.MepTypeFilterVisibility\ApplyMepTypeFilterVisibilityCommand.cs" "EndsWith(typeFilterName, StringComparison.Ordinal)" "MEP type filter prefixed name suffix comparison"
 Require-Text "build.ps1" "src\PlugHub.MepTypeFilterVisibility\PlugHub.MepTypeFilterVisibility.csproj" "MEP type filter visibility project build registration"
 Require-Text "PlugHub_Packages.slnx" "src/PlugHub.MepTypeFilterVisibility/PlugHub.MepTypeFilterVisibility.csproj" "MEP type filter visibility solution registration"
+Validate-PlugHubContractsReferences
 Reject-Text "packages.json" "builtin:" "Built-in icon reference"
 Reject-Text "packages.json" "Tee/Tap" "Duct preferred junction old Tee/Tap wording"
 Require-Text ".github\workflows\build-package.yml" '$indexVersionPattern = [regex]::new(' "Root indexVersion replacement regex instance"
 Require-Text ".github\workflows\build-package.yml" '$manifestText = $indexVersionPattern.Replace($manifestText, (' "Root indexVersion replacement count-limited call"
-Require-Text ".github\workflows\build-package.yml" 'refs/heads/codex' "Codex branch workflow registration"
-Require-Text ".github\workflows\build-package.yml" 'refs/heads/hermes' "Hermes branch workflow registration"
-Require-Text ".github\workflows\build-package.yml" 'if: github.actor != ''github-actions[bot]'' && github.event_name == ''push'' && contains(fromJson(''["refs/heads/codex","refs/heads/hermes"]''), github.ref)' "Package output commit branch allow-list"
+Require-Text ".github\workflows\build-package.yml" 'path: PlugHub' "PlugHub contracts checkout path"
+Reject-Text ".github\workflows\build-package.yml" 'path: revittool' "Old PlugHub contracts checkout path"
+Require-Text ".github\workflows\build-package.yml" '- "**"' "All branch workflow trigger"
+Require-Text ".github\workflows\build-package.yml" 'if: github.actor != ''github-actions[bot]'' && github.event_name == ''push'' && github.ref_type == ''branch''' "Package output commit all branch condition"
+Require-Text ".github\workflows\build-package.yml" 'github.ref_type == ''branch''' "Gitee mirror all branch condition"
 Reject-Text ".github\workflows\build-package.yml" 'if: github.actor != ''github-actions[bot]'' && ((github.event_name == ''push'' && contains(fromJson(''["refs/heads/main","refs/heads/codex","refs/heads/hermes"]''), github.ref)) || (github.event_name == ''workflow_dispatch'' && github.ref == ''refs/heads/main''))' "Package output commit main branch allow-list"
+Reject-Text ".github\workflows\build-package.yml" 'contains(fromJson(''["refs/heads/codex","refs/heads/hermes"]''), github.ref)' "Package output commit restricted branch allow-list"
+Reject-Text ".github\workflows\build-package.yml" 'contains(fromJson(''["refs/heads/main","refs/heads/codex","refs/heads/hermes"]''), github.ref)' "Gitee mirror restricted branch allow-list"
 Reject-Text ".github\workflows\build-package.yml" "(github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')" "Package output commit manual main write-back condition"
 Require-Text ".github\workflows\build-package.yml" 'origin/$githubRefName:refs/heads/$githubRefName' "Gitee working branch mirror refspec"
 Require-Text ".github\workflows\build-package.yml" 'Sync Gitee release asset' "Gitee release asset sync step"
