@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.1",
-  "indexVersion": "V1.1.0",
+  "indexVersion": "V1.0.9",
   "revitVersions": [
     "2020"
   ],
@@ -145,60 +145,6 @@
           "description": "读取当前项目所有族，排除系统族，弹出选择窗口批量保存到指定文件夹。",
           "iconPath": "icons/family-file-saver.png",
           "commandType": "PlugHub.FamilyFileSaver.SaveFamilyFilesCommand"
-        }
-      ]
-    },
-    {
-      "id": "plughub.modules.clear-height-analysis",
-      "version": "V2.0.0",
-      "author": "GAOMENGGU",
-      "displayName": "土建工具",
-      "description": "基于真实楼层与宿主/链接模型分析净高，持久保存分析批次并按需生成轻量轮廓、面积色块、PNG 和 CSV。",
-      "assembly": "dist/PlugHub.ClearHeightAnalysis.dll",
-      "category": "civil",
-      "tags": [
-        "civil",
-        "architecture",
-        "structural",
-        "mep",
-        "clear-height",
-        "heatmap",
-        "revit-api"
-      ],
-      "features": [
-        {
-          "id": "plughub.modules.clear-height-analysis.analyze",
-          "displayName": "净高分析",
-          "description": "分析真实边界内的结构与机电净高，默认生成轻量问题轮廓，可选面积色块、PNG 总览和 CSV。",
-          "iconPath": "icons/clear-height-analysis.png",
-          "commandType": "PlugHub.ClearHeightAnalysis.ClearHeightAnalysisCommand"
-        }
-      ]
-    },
-    {
-      "id": "plughub.modules.hubei-report-parameters",
-      "version": "V1.0.0",
-      "author": "GAOMENGGU",
-      "displayName": "土建工具",
-      "description": "按用户选择的 CSV 模板创建 Revit 共享参数、写入参数值并生成 HIFC 属性集映射文件。",
-      "assembly": "dist/PlugHub.HubeiReportParameters.dll",
-      "category": "civil",
-      "tags": [
-        "civil",
-        "hubei",
-        "report",
-        "planning",
-        "parameter",
-        "shared-parameter",
-        "revit-api"
-      ],
-      "features": [
-        {
-          "id": "plughub.modules.hubei-report-parameters.sync",
-          "displayName": "湖北报规参数",
-          "description": "选择 CSV 模板后创建或更新当前项目共享参数，按真实数据或默认值赋值并生成项目 HIFC 映射文件。",
-          "iconPath": "icons/hubei-report-parameters.png",
-          "commandType": "PlugHub.HubeiReportParameters.SyncHubeiReportParametersCommand"
         }
       ]
     },
