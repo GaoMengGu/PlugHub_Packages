@@ -72,15 +72,17 @@ internal static class Program
     private static void Validate(string path)
     {
         List<Row> rows = ReadRows(path);
+        ResolveRevitParameterNames(rows);
+        ValidateConflictAliases(rows, path);
         ValidateDefinitions(rows, path);
         ValidateValues(rows, path);
         string hifcText = BuildHifcText(rows);
         foreach (Row row in rows)
         {
-            string expectedProperty = "    " + row.Name + "\t" + row.IfcDataType + "\t" + row.Name;
+            string expectedProperty = "    " + row.Name + "\t" + row.IfcDataType + "\t" + row.RevitParameterName;
             if (!hifcText.Contains(expectedProperty))
             {
-                throw new InvalidOperationException(Path.GetFileName(path) + " did not preserve IFC data type for " + row.Name + ".");
+                throw new InvalidOperationException(Path.GetFileName(path) + " did not preserve IFC data type and Revit parameter mapping for " + row.Name + ".");
             }
         }
     }
@@ -127,7 +129,7 @@ internal static class Program
 
     private static void ValidateDefinitions(IReadOnlyCollection<Row> rows, string path)
     {
-        foreach (IGrouping<string, Row> group in rows.GroupBy(row => row.Name, StringComparer.Ordinal))
+        foreach (IGrouping<string, Row> group in rows.GroupBy(row => row.RevitParameterName, StringComparer.Ordinal))
         {
             Row first = group.First();
             if (first.BindingKind != "I" && first.BindingKind != "T")
@@ -137,12 +139,12 @@ internal static class Program
 
             if (group.Any(row => row.BindingKind != first.BindingKind || !string.Equals(row.RevitParameterType, first.RevitParameterType, StringComparison.OrdinalIgnoreCase)))
             {
-                throw new InvalidOperationException(Path.GetFileName(path) + " has incompatible shared parameter definitions for " + first.Name + ".");
+                throw new InvalidOperationException(Path.GetFileName(path) + " has incompatible shared parameter definitions for " + first.RevitParameterName + ".");
             }
 
             if (group.SelectMany(row => row.RevitCategories).Distinct(StringComparer.Ordinal).Count() == 0)
             {
-                throw new InvalidOperationException(Path.GetFileName(path) + " must bind " + first.Name + " to at least one Revit category.");
+                throw new InvalidOperationException(Path.GetFileName(path) + " must bind " + first.RevitParameterName + " to at least one Revit category.");
             }
         }
     }
@@ -150,11 +152,41 @@ internal static class Program
     private static void ValidateValues(IReadOnlyCollection<Row> rows, string path)
     {
         foreach (var group in rows.SelectMany(row => row.RevitCategories.Select(category => new { row, category }))
-            .GroupBy(item => item.row.Name + "|" + item.category, StringComparer.Ordinal))
+            .GroupBy(item => item.row.RevitParameterName + "|" + item.category, StringComparer.Ordinal))
         {
             if (group.Select(item => item.row.Value).Distinct(StringComparer.Ordinal).Count() > 1)
             {
-                throw new InvalidOperationException(Path.GetFileName(path) + " assigns conflicting values to " + group.First().row.Name + " in " + group.First().category + ".");
+                throw new InvalidOperationException(Path.GetFileName(path) + " assigns conflicting values to " + group.First().row.RevitParameterName + " in " + group.First().category + ".");
+            }
+        }
+    }
+
+    private static void ResolveRevitParameterNames(IReadOnlyCollection<Row> rows)
+    {
+        foreach (var group in rows.SelectMany(row => row.RevitCategories.Select(category => new { row, category }))
+            .GroupBy(item => item.row.Name + "|" + item.category, StringComparer.Ordinal)
+            .Where(group => group.Select(item => item.row.Value).Distinct(StringComparer.Ordinal).Count() > 1))
+        {
+            foreach (Row row in group.Select(item => item.row).Distinct())
+            {
+                row.RevitParameterName = row.PropertySetName + "_" + row.Name;
+            }
+        }
+    }
+
+    private static void ValidateConflictAliases(IReadOnlyCollection<Row> rows, string path)
+    {
+        foreach (var group in rows.SelectMany(row => row.RevitCategories.Select(category => new { row, category }))
+            .GroupBy(item => item.row.Name + "|" + item.category, StringComparer.Ordinal)
+            .Where(group => group.Select(item => item.row.Value).Distinct(StringComparer.Ordinal).Count() > 1))
+        {
+            foreach (Row row in group.Select(item => item.row).Distinct())
+            {
+                string expectedName = row.PropertySetName + "_" + row.Name;
+                if (!string.Equals(row.RevitParameterName, expectedName, StringComparison.Ordinal))
+                {
+                    throw new InvalidOperationException(Path.GetFileName(path) + " did not split conflicting parameter " + row.Name + " for " + row.PropertySetName + ".");
+                }
             }
         }
     }
@@ -168,7 +200,7 @@ internal static class Program
             builder.Append("PropertySet:\t").Append(first.PropertySetName).Append("\t").Append(first.BindingKind).Append("\t").Append(first.IfcEntityName).AppendLine();
             foreach (Row row in group)
             {
-                builder.Append("    ").Append(row.Name).Append("\t").Append(row.IfcDataType).Append("\t").Append(row.Name).AppendLine();
+                builder.Append("    ").Append(row.Name).Append("\t").Append(row.IfcDataType).Append("\t").Append(row.RevitParameterName).AppendLine();
             }
         }
 
@@ -267,6 +299,7 @@ internal static class Program
             Name = name;
             IfcDataType = ifcDataType;
             RevitParameterType = revitParameterType;
+            RevitParameterName = name;
             DefaultValue = defaultValue;
             ActualValue = actualValue;
         }
@@ -279,6 +312,7 @@ internal static class Program
         public string Name { get; }
         public string IfcDataType { get; }
         public string RevitParameterType { get; }
+        public string RevitParameterName { get; set; }
         public string DefaultValue { get; }
         public string ActualValue { get; }
         public string Value => string.IsNullOrWhiteSpace(ActualValue) ? DefaultValue : ActualValue;

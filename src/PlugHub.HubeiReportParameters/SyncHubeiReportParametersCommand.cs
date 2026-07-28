@@ -61,7 +61,7 @@ namespace PlugHub.HubeiReportParameters
 
         private static bool ConfirmMergedParameters(HubeiReportTemplate template)
         {
-            string[] duplicateNames = template.Rows.GroupBy(row => row.Name, StringComparer.Ordinal)
+            string[] duplicateNames = template.Rows.GroupBy(row => row.RevitParameterName, StringComparer.Ordinal)
                 .Where(group => group.Count() > 1)
                 .Select(group => group.Key)
                 .OrderBy(name => name, StringComparer.Ordinal)
@@ -132,12 +132,12 @@ namespace PlugHub.HubeiReportParameters
 
         private static void ApplyDefinition(Document document, DefinitionGroup group, HubeiReportTemplateRow definition, bool removeExistingParameters, HubeiReportResult result)
         {
-            Definition existingDefinition = FindExistingDefinition(document, definition.Name);
+            Definition existingDefinition = FindExistingDefinition(document, definition.RevitParameterName);
             if (existingDefinition != null && removeExistingParameters)
             {
                 if (!document.ParameterBindings.Remove(existingDefinition))
                 {
-                    throw new InvalidOperationException("无法清除同名参数：" + definition.Name + "。");
+                    throw new InvalidOperationException("无法清除同名参数：" + definition.RevitParameterName + "。");
                 }
 
                 result.RemovedCount++;
@@ -154,7 +154,7 @@ namespace PlugHub.HubeiReportParameters
                 return;
             }
 
-            ExternalDefinition externalDefinition = GetOrCreateDefinition(group, definition.Name, definition.RevitParameterType);
+            ExternalDefinition externalDefinition = GetOrCreateDefinition(group, definition.RevitParameterName, definition.RevitParameterType);
             InsertBinding(document, externalDefinition, categories, definition.IsInstanceBinding);
             result.CreatedCount++;
         }
@@ -203,18 +203,18 @@ namespace PlugHub.HubeiReportParameters
         {
             if (existingBinding == null)
             {
-                throw new InvalidOperationException("同名参数 " + definition.Name + " 的绑定类型不受支持。请勾选清除当前项目同名参数后重试。");
+                throw new InvalidOperationException("同名参数 " + definition.RevitParameterName + " 的绑定类型不受支持。请勾选清除当前项目同名参数后重试。");
             }
 
             if (existingDefinition.ParameterType != definition.RevitParameterType)
             {
-                throw new InvalidOperationException("同名参数 " + definition.Name + " 的属性类型与模板不一致。请勾选清除当前项目同名参数后重试。");
+                throw new InvalidOperationException("同名参数 " + definition.RevitParameterName + " 的属性类型与模板不一致。请勾选清除当前项目同名参数后重试。");
             }
 
             bool isInstanceBinding = existingBinding is InstanceBinding;
             if (isInstanceBinding != definition.IsInstanceBinding)
             {
-                throw new InvalidOperationException("同名参数 " + definition.Name + " 的 I/T 类型与模板不一致。请勾选清除当前项目同名参数后重试。");
+                throw new InvalidOperationException("同名参数 " + definition.RevitParameterName + " 的 I/T 类型与模板不一致。请勾选清除当前项目同名参数后重试。");
             }
         }
 
@@ -273,7 +273,7 @@ namespace PlugHub.HubeiReportParameters
             bool hasActualValue = !string.IsNullOrWhiteSpace(definition.ActualValue);
             foreach (Element element in CollectTargetElements(document, definition))
             {
-                Parameter parameter = element.LookupParameter(definition.Name);
+                Parameter parameter = element.LookupParameter(definition.RevitParameterName);
                 if (parameter == null || parameter.IsReadOnly || !TrySetValue(parameter, definition.Value))
                 {
                     result.SkippedValueCount++;

@@ -17,6 +17,8 @@ namespace PlugHub.HubeiReportParameters
 
         public string Name { get; set; } = string.Empty;
 
+        public string RevitParameterName { get; set; } = string.Empty;
+
         public string IfcDataType { get; set; } = string.Empty;
 
         public ParameterType RevitParameterType { get; set; }

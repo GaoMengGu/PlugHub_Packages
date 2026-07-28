@@ -52,13 +52,14 @@ namespace PlugHub.HubeiReportParameters
                 throw new InvalidOperationException("CSV 模板中没有参数行。");
             }
 
+            ResolveRevitParameterNames(rows);
             ValidateDuplicateNames(rows);
             return new HubeiReportTemplate { FilePath = filePath, Rows = rows };
         }
 
         public static IReadOnlyList<HubeiReportTemplateRow> MergeParameterRows(IReadOnlyCollection<HubeiReportTemplateRow> rows)
         {
-            return rows.GroupBy(row => row.Name, StringComparer.Ordinal)
+            return rows.GroupBy(row => row.RevitParameterName, StringComparer.Ordinal)
                 .Select(group =>
                 {
                     HubeiReportTemplateRow first = group.First();
@@ -70,13 +71,14 @@ namespace PlugHub.HubeiReportParameters
                         IfcEntityName = first.IfcEntityName,
                         RevitCategories = group.SelectMany(row => row.RevitCategories).Distinct().ToArray(),
                         Name = first.Name,
+                        RevitParameterName = first.RevitParameterName,
                         IfcDataType = first.IfcDataType,
                         RevitParameterType = first.RevitParameterType,
                         DefaultValue = first.DefaultValue,
                         ActualValue = first.ActualValue
                     };
                 })
-                .OrderBy(row => row.Name, StringComparer.Ordinal)
+                .OrderBy(row => row.RevitParameterName, StringComparer.Ordinal)
                 .ToArray();
         }
 
@@ -104,6 +106,7 @@ namespace PlugHub.HubeiReportParameters
                 IfcEntityName = Required(fields[2], rowNumber, "IFC构件"),
                 RevitCategories = RevitCategoryCatalog.Parse(fields[3], rowNumber),
                 Name = Required(fields[4], rowNumber, "属性名称"),
+                RevitParameterName = Required(fields[4], rowNumber, "属性名称"),
                 IfcDataType = ifcDataType,
                 RevitParameterType = revitParameterType,
                 DefaultValue = fields[7] ?? string.Empty,
@@ -113,24 +116,38 @@ namespace PlugHub.HubeiReportParameters
 
         private static void ValidateDuplicateNames(IReadOnlyCollection<HubeiReportTemplateRow> rows)
         {
-            foreach (IGrouping<string, HubeiReportTemplateRow> group in rows.GroupBy(row => row.Name, StringComparer.Ordinal))
+            foreach (IGrouping<string, HubeiReportTemplateRow> group in rows.GroupBy(row => row.RevitParameterName, StringComparer.Ordinal))
             {
                 HubeiReportTemplateRow first = group.First();
                 if (group.Any(row => row.BindingKind != first.BindingKind || row.RevitParameterType != first.RevitParameterType))
                 {
-                    throw new InvalidOperationException("同名参数 " + first.Name + " 的参数类型或 Revit参数类型不一致，请修改模板后重试。");
+                    throw new InvalidOperationException("Revit 参数 " + first.RevitParameterName + " 的参数类型或 Revit参数类型不一致，请修改模板后重试。");
                 }
             }
 
             foreach (var group in rows
                 .SelectMany(row => row.RevitCategories.Select(category => new { row, category }))
-                .GroupBy(item => item.row.Name + "|" + item.category, StringComparer.Ordinal))
+                .GroupBy(item => item.row.RevitParameterName + "|" + item.category, StringComparer.Ordinal))
             {
                 string[] values = group.Select(item => item.row.Value).Distinct(StringComparer.Ordinal).ToArray();
                 if (values.Length > 1)
                 {
                     HubeiReportTemplateRow first = group.First().row;
-                    throw new InvalidOperationException("同名参数 " + first.Name + " 在同一 Revit类别中存在不同的真实数据或默认值，请修改模板后重试。");
+                    throw new InvalidOperationException("Revit 参数 " + first.RevitParameterName + " 在同一 Revit类别中存在不同的真实数据或默认值，请修改模板后重试。");
+                }
+            }
+        }
+
+        private static void ResolveRevitParameterNames(IReadOnlyCollection<HubeiReportTemplateRow> rows)
+        {
+            foreach (var group in rows
+                .SelectMany(row => row.RevitCategories.Select(category => new { row, category }))
+                .GroupBy(item => item.row.Name + "|" + item.category, StringComparer.Ordinal)
+                .Where(group => group.Select(item => item.row.Value).Distinct(StringComparer.Ordinal).Count() > 1))
+            {
+                foreach (HubeiReportTemplateRow row in group.Select(item => item.row).Distinct())
+                {
+                    row.RevitParameterName = row.PropertySetName + "_" + row.Name;
                 }
             }
         }

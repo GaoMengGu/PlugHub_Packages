@@ -18,7 +18,7 @@ namespace PlugHub.HubeiReportParameters
                 builder.Append("PropertySet:\t").Append(first.PropertySetName).Append("\t").Append(first.BindingKind).Append("\t").Append(first.IfcEntityName).AppendLine();
                 foreach (HubeiReportTemplateRow row in group.OrderBy(row => row.Name, StringComparer.Ordinal))
                 {
-                    builder.Append("    ").Append(row.Name).Append("\t").Append(row.IfcDataType).Append("\t").Append(row.Name).AppendLine();
+                    builder.Append("    ").Append(row.Name).Append("\t").Append(row.IfcDataType).Append("\t").Append(row.RevitParameterName).AppendLine();
                 }
 
                 builder.AppendLine();
