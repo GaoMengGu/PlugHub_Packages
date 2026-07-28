@@ -79,7 +79,7 @@ internal static class Program
         string hifcText = BuildHifcText(rows);
         foreach (Row row in rows)
         {
-            string expectedProperty = "    " + row.Name + "\t" + row.TemplateIfcDataType + "\t" + row.RevitParameterName;
+            string expectedProperty = "\t" + row.Name + "\t" + row.TemplateIfcDataType + "\t" + row.RevitParameterName;
             if (!hifcText.Contains(expectedProperty))
             {
                 throw new InvalidOperationException(Path.GetFileName(path) + " did not preserve the template IFC data type and Revit parameter mapping for " + row.Name + ".");
@@ -200,7 +200,7 @@ internal static class Program
             builder.Append("PropertySet:\t").Append(first.PropertySetName).Append("\t").Append(first.BindingKind).Append("\t").Append(first.IfcEntityName).AppendLine();
             foreach (Row row in group)
             {
-                builder.Append("    ").Append(row.Name).Append("\t").Append(row.TemplateIfcDataType).Append("\t").Append(row.RevitParameterName).AppendLine();
+                builder.Append("\t").Append(row.Name).Append("\t").Append(row.TemplateIfcDataType).Append("\t").Append(row.RevitParameterName).AppendLine();
             }
         }
 
