@@ -172,7 +172,7 @@ namespace PlugHub.HubeiReportParameters
                 throw new InvalidOperationException("第 " + rowNumber + " 行的 IFC属性类型不受 IFC Exporter 支持：" + value + "。");
             }
 
-            return supportedTypes.First(type => string.Equals(type, typeName, StringComparison.OrdinalIgnoreCase));
+            return value.Trim();
         }
 
         private static string Required(string value, int rowNumber, string columnName)

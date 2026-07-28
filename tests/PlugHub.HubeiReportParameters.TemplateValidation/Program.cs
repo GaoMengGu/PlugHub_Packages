@@ -79,10 +79,10 @@ internal static class Program
         string hifcText = BuildHifcText(rows);
         foreach (Row row in rows)
         {
-            string expectedProperty = "    " + row.Name + "\t" + row.IfcDataType + "\t" + row.RevitParameterName;
+            string expectedProperty = "    " + row.Name + "\t" + row.TemplateIfcDataType + "\t" + row.RevitParameterName;
             if (!hifcText.Contains(expectedProperty))
             {
-                throw new InvalidOperationException(Path.GetFileName(path) + " did not preserve IFC data type and Revit parameter mapping for " + row.Name + ".");
+                throw new InvalidOperationException(Path.GetFileName(path) + " did not preserve the template IFC data type and Revit parameter mapping for " + row.Name + ".");
             }
         }
     }
@@ -121,7 +121,7 @@ internal static class Program
                 throw new InvalidOperationException(Path.GetFileName(path) + " row " + (index + 1) + " has unsupported Revit 2020 parameter type " + fields[6] + ".");
             }
 
-            rows.Add(new Row(index + 1, fields[0].Trim(), fields[1].Trim().ToUpperInvariant(), fields[2].Trim(), SplitCategories(fields[3]), fields[4].Trim(), ifcDataType, revitParameterType, fields[7], fields[8]));
+            rows.Add(new Row(index + 1, fields[0].Trim(), fields[1].Trim().ToUpperInvariant(), fields[2].Trim(), SplitCategories(fields[3]), fields[4].Trim(), fields[5].Trim(), ifcDataType, revitParameterType, fields[7], fields[8]));
         }
 
         return rows;
@@ -200,7 +200,7 @@ internal static class Program
             builder.Append("PropertySet:\t").Append(first.PropertySetName).Append("\t").Append(first.BindingKind).Append("\t").Append(first.IfcEntityName).AppendLine();
             foreach (Row row in group)
             {
-                builder.Append("    ").Append(row.Name).Append("\t").Append(row.IfcDataType).Append("\t").Append(row.RevitParameterName).AppendLine();
+                builder.Append("    ").Append(row.Name).Append("\t").Append(row.TemplateIfcDataType).Append("\t").Append(row.RevitParameterName).AppendLine();
             }
         }
 
@@ -289,7 +289,7 @@ internal static class Program
 
     private sealed class Row
     {
-        public Row(int rowNumber, string propertySetName, string bindingKind, string ifcEntityName, IReadOnlyCollection<string> revitCategories, string name, string ifcDataType, string revitParameterType, string defaultValue, string actualValue)
+        public Row(int rowNumber, string propertySetName, string bindingKind, string ifcEntityName, IReadOnlyCollection<string> revitCategories, string name, string templateIfcDataType, string ifcDataType, string revitParameterType, string defaultValue, string actualValue)
         {
             RowNumber = rowNumber;
             PropertySetName = propertySetName;
@@ -297,6 +297,7 @@ internal static class Program
             IfcEntityName = ifcEntityName;
             RevitCategories = revitCategories;
             Name = name;
+            TemplateIfcDataType = templateIfcDataType;
             IfcDataType = ifcDataType;
             RevitParameterType = revitParameterType;
             RevitParameterName = name;
@@ -310,6 +311,7 @@ internal static class Program
         public string IfcEntityName { get; }
         public IReadOnlyCollection<string> RevitCategories { get; }
         public string Name { get; }
+        public string TemplateIfcDataType { get; }
         public string IfcDataType { get; }
         public string RevitParameterType { get; }
         public string RevitParameterName { get; set; }

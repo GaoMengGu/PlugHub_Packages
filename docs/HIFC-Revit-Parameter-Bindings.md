@@ -24,7 +24,7 @@
 | 默认值 | 真实数据为空时写入的值 |
 | 真实数据 | 非空时优先写入并覆盖目标参数现有值 |
 
-`IFC属性类型` 输入兼容旧清单中的 `IfcLabel`、`IfcReal`、`IfcInteger` 等前缀写法；生成 HIFC 文件时会标准化为 IFC Exporter 支持的 `Label`、`Real`、`Integer` 等名称。支持清单以 `docs/DefaultUserDefinedParameterSets.txt` 的 `Data types supported` 为依据。HIFC 属性行的第三列是实际 Revit 参数名：无冲突时等于属性名称。
+`IFC属性类型` 按模板第六列原样写入 HIFC 属性行第二列，包括 `IfcLabel`、`IfcReal`、`IfcInteger` 等前缀写法；插件只按 `docs/DefaultUserDefinedParameterSets.txt` 的 `Data types supported` 校验其基础类型是否有效，不会标准化或替换模板值。HIFC 属性行的第三列是实际 Revit 参数名：无冲突时等于属性名称。
 
 ## 输出与赋值
 
@@ -32,7 +32,7 @@
 
 ```text
 PropertySet:	Pset_建筑技术信息属性集	I	IfcBuilding
-    建筑高度	Real	建筑高度
+    建筑高度	IfcReal	建筑高度
 ```
 
 参数值始终由模板控制：`真实数据` 非空时使用真实数据；为空时使用默认值。相同名称的参数只合并共享参数定义和 Revit 类别，原始模板行仍按各自类别写值，因此不同类别允许不同默认值或真实数据。同名参数在同一 Revit 类别中存在不同最终值时，插件会为冲突组中的每一行创建 `属性集名称_属性名称` 的独立 Revit 参数，并将该实际名称写入 HIFC 属性行第三列；原 IFC 属性名称不变。别名相同但 `I/T` 或 `Revit参数类型` 不一致时，模板预校验会停止执行。
