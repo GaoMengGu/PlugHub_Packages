@@ -13,7 +13,9 @@ namespace PlugHub.HubeiReportParameters
 
         public string IfcEntityName { get; set; } = string.Empty;
 
-        public IReadOnlyCollection<BuiltInCategory> RevitCategories { get; set; } = new BuiltInCategory[0];
+        public IReadOnlyCollection<string> RevitCategoryNames { get; set; } = new string[0];
+
+        public IReadOnlyCollection<Category> RevitCategories { get; set; } = new Category[0];
 
         public string Name { get; set; } = string.Empty;
 

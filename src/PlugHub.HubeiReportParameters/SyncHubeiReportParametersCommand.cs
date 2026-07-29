@@ -30,14 +30,15 @@ namespace PlugHub.HubeiReportParameters
                     return Result.Cancelled;
                 }
 
+                Document document = commandData.Application.ActiveUIDocument.Document;
+                EnsureSavedProject(document);
                 HubeiReportTemplate template = HubeiReportTemplateReader.Read(selection.TemplatePath);
+                HubeiReportTemplateReader.PrepareForDocument(template, document);
                 if (!ConfirmMergedParameters(template))
                 {
                     return Result.Cancelled;
                 }
 
-                Document document = commandData.Application.ActiveUIDocument.Document;
-                EnsureSavedProject(document);
                 IReadOnlyList<HubeiReportTemplateRow> definitions = HubeiReportTemplateReader.MergeParameterRows(template.Rows);
                 HubeiReportResult result = ApplyDefinitions(document, definitions, template.Rows, selection.RemoveExistingParameters);
                 string hifcPath = WriteHifcFile(document, template.Rows);
@@ -218,7 +219,7 @@ namespace PlugHub.HubeiReportParameters
             }
         }
 
-        private static CategorySet GetBindingCategories(Document document, IReadOnlyCollection<BuiltInCategory> requestedCategories, ElementBinding existingBinding)
+        private static CategorySet GetBindingCategories(Document document, IReadOnlyCollection<Category> requestedCategories, ElementBinding existingBinding)
         {
             CategorySet categorySet = document.Application.Create.NewCategorySet();
             if (existingBinding != null)
@@ -229,12 +230,11 @@ namespace PlugHub.HubeiReportParameters
                 }
             }
 
-            foreach (BuiltInCategory builtInCategory in requestedCategories)
+            foreach (Category category in requestedCategories)
             {
-                Category category = document.Settings.Categories.get_Item(builtInCategory);
                 if (category == null || !category.AllowsBoundParameters)
                 {
-                    throw new InvalidOperationException("Revit 类别不支持共享参数绑定：" + builtInCategory + "。");
+                    throw new InvalidOperationException("Revit 类别不支持共享参数绑定：" + (category == null ? "<null>" : category.Name) + "。");
                 }
 
                 if (!categorySet.Contains(category))
@@ -293,7 +293,7 @@ namespace PlugHub.HubeiReportParameters
 
         private static IEnumerable<Element> CollectTargetElements(Document document, HubeiReportTemplateRow definition)
         {
-            HashSet<int> categoryIds = new HashSet<int>(definition.RevitCategories.Select(category => (int)category));
+            HashSet<int> categoryIds = new HashSet<int>(definition.RevitCategories.Select(category => category.Id.IntegerValue));
             if (definition.IsInstanceBinding && categoryIds.Remove((int)BuiltInCategory.OST_ProjectInformation))
             {
                 yield return document.ProjectInformation;

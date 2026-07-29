@@ -52,9 +52,19 @@ namespace PlugHub.HubeiReportParameters
                 throw new InvalidOperationException("CSV 模板中没有参数行。");
             }
 
-            ResolveRevitParameterNames(rows);
-            ValidateDuplicateNames(rows);
             return new HubeiReportTemplate { FilePath = filePath, Rows = rows };
+        }
+
+        public static void PrepareForDocument(HubeiReportTemplate template, Document document)
+        {
+            if (template == null || document == null)
+            {
+                throw new InvalidOperationException("未收到模板或 Revit 项目。");
+            }
+
+            RevitCategoryCatalog.Resolve(document, template.Rows);
+            ResolveRevitParameterNames(template.Rows);
+            ValidateDuplicateNames(template.Rows);
         }
 
         public static IReadOnlyList<HubeiReportTemplateRow> MergeParameterRows(IReadOnlyCollection<HubeiReportTemplateRow> rows)
@@ -69,7 +79,11 @@ namespace PlugHub.HubeiReportParameters
                         PropertySetName = first.PropertySetName,
                         BindingKind = first.BindingKind,
                         IfcEntityName = first.IfcEntityName,
-                        RevitCategories = group.SelectMany(row => row.RevitCategories).Distinct().ToArray(),
+                        RevitCategoryNames = group.SelectMany(row => row.RevitCategoryNames).Distinct(StringComparer.Ordinal).ToArray(),
+                        RevitCategories = group.SelectMany(row => row.RevitCategories)
+                            .GroupBy(category => category.Id.IntegerValue)
+                            .Select(categoryGroup => categoryGroup.First())
+                            .ToArray(),
                         Name = first.Name,
                         RevitParameterName = first.RevitParameterName,
                         IfcDataType = first.IfcDataType,
@@ -104,7 +118,7 @@ namespace PlugHub.HubeiReportParameters
                 PropertySetName = Required(fields[0], rowNumber, "属性集名称"),
                 BindingKind = bindingKind,
                 IfcEntityName = Required(fields[2], rowNumber, "IFC构件"),
-                RevitCategories = RevitCategoryCatalog.Parse(fields[3], rowNumber),
+                RevitCategoryNames = RevitCategoryCatalog.ParseNames(fields[3], rowNumber),
                 Name = Required(fields[4], rowNumber, "属性名称"),
                 RevitParameterName = Required(fields[4], rowNumber, "属性名称"),
                 IfcDataType = ifcDataType,
