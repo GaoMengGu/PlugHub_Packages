@@ -3,9 +3,7 @@ name: Build PlugHub Package
 on:
   push:
     branches:
-      - main
-      - codex
-      - hermes
+      - "**"
     tags:
       - "V*"
   pull_request:
@@ -185,7 +183,7 @@ jobs:
           Compress-Archive -Path $packageRoot -DestinationPath $env:PACKAGE_ZIP -Force
 
       - name: Commit package outputs
-        if: github.actor != 'github-actions[bot]' && github.event_name == 'push' && contains(fromJson('["refs/heads/codex","refs/heads/hermes"]'), github.ref)
+        if: github.actor != 'github-actions[bot]' && github.event_name == 'push' && github.ref_type == 'branch' && github.ref != 'refs/heads/main'
         shell: pwsh
         working-directory: PlugHub_Packages
         run: |

@@ -154,15 +154,9 @@ namespace PlugHub.HubeiReportParameters
 
         private static void ResolveRevitParameterNames(IReadOnlyCollection<HubeiReportTemplateRow> rows)
         {
-            foreach (var group in rows
-                .SelectMany(row => row.RevitCategories.Select(category => new { row, category }))
-                .GroupBy(item => item.row.Name + "|" + item.category, StringComparer.Ordinal)
-                .Where(group => group.Select(item => item.row.Value).Distinct(StringComparer.Ordinal).Count() > 1))
+            foreach (HubeiReportTemplateRow row in rows)
             {
-                foreach (HubeiReportTemplateRow row in group.Select(item => item.row).Distinct())
-                {
-                    row.RevitParameterName = row.PropertySetName + "_" + row.Name;
-                }
+                row.RevitParameterName = row.PropertySetName + "_" + row.Name;
             }
         }
 

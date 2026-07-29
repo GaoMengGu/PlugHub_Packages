@@ -73,7 +73,7 @@ internal static class Program
     {
         List<Row> rows = ReadRows(path);
         ResolveRevitParameterNames(rows);
-        ValidateConflictAliases(rows, path);
+        ValidatePropertySetParameterNames(rows, path);
         ValidateDefinitions(rows, path);
         ValidateValues(rows, path);
         string hifcText = BuildHifcText(rows);
@@ -149,6 +149,18 @@ internal static class Program
         }
     }
 
+    private static void ValidatePropertySetParameterNames(IReadOnlyCollection<Row> rows, string path)
+    {
+        foreach (Row row in rows)
+        {
+            string expectedName = row.PropertySetName + "_" + row.Name;
+            if (!string.Equals(row.RevitParameterName, expectedName, StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(Path.GetFileName(path) + " must use the property set name and property name for every Revit parameter: " + expectedName + ".");
+            }
+        }
+    }
+
     private static void ValidateValues(IReadOnlyCollection<Row> rows, string path)
     {
         foreach (var group in rows.SelectMany(row => row.RevitCategories.Select(category => new { row, category }))
@@ -163,31 +175,9 @@ internal static class Program
 
     private static void ResolveRevitParameterNames(IReadOnlyCollection<Row> rows)
     {
-        foreach (var group in rows.SelectMany(row => row.RevitCategories.Select(category => new { row, category }))
-            .GroupBy(item => item.row.Name + "|" + item.category, StringComparer.Ordinal)
-            .Where(group => group.Select(item => item.row.Value).Distinct(StringComparer.Ordinal).Count() > 1))
+        foreach (Row row in rows)
         {
-            foreach (Row row in group.Select(item => item.row).Distinct())
-            {
-                row.RevitParameterName = row.PropertySetName + "_" + row.Name;
-            }
-        }
-    }
-
-    private static void ValidateConflictAliases(IReadOnlyCollection<Row> rows, string path)
-    {
-        foreach (var group in rows.SelectMany(row => row.RevitCategories.Select(category => new { row, category }))
-            .GroupBy(item => item.row.Name + "|" + item.category, StringComparer.Ordinal)
-            .Where(group => group.Select(item => item.row.Value).Distinct(StringComparer.Ordinal).Count() > 1))
-        {
-            foreach (Row row in group.Select(item => item.row).Distinct())
-            {
-                string expectedName = row.PropertySetName + "_" + row.Name;
-                if (!string.Equals(row.RevitParameterName, expectedName, StringComparison.Ordinal))
-                {
-                    throw new InvalidOperationException(Path.GetFileName(path) + " did not split conflicting parameter " + row.Name + " for " + row.PropertySetName + ".");
-                }
-            }
+            row.RevitParameterName = row.PropertySetName + "_" + row.Name;
         }
     }
 
