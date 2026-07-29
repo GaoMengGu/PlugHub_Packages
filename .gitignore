@@ -16,3 +16,6 @@ dist/*.pdb
 # Local release packaging output.
 release/
 PlugHub-Packages-*.zip
+
+# Local reference templates and mappings selected by package users.
+/docs/
