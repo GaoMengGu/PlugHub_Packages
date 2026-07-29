@@ -7,24 +7,9 @@ namespace PlugHub.HubeiReportParameters
 {
     public static class RevitCategoryCatalog
     {
-        private static readonly IReadOnlyDictionary<string, BuiltInCategory> Categories =
+        private static readonly IReadOnlyDictionary<string, BuiltInCategory> Aliases =
             new Dictionary<string, BuiltInCategory>(StringComparer.Ordinal)
             {
-                ["项目信息"] = BuiltInCategory.OST_ProjectInformation,
-                ["场地"] = BuiltInCategory.OST_Site,
-                ["标高"] = BuiltInCategory.OST_Levels,
-                ["轴网"] = BuiltInCategory.OST_Grids,
-                ["墙"] = BuiltInCategory.OST_Walls,
-                ["门"] = BuiltInCategory.OST_Doors,
-                ["窗"] = BuiltInCategory.OST_Windows,
-                ["楼板"] = BuiltInCategory.OST_Floors,
-                ["屋顶"] = BuiltInCategory.OST_Roofs,
-                ["天花板"] = BuiltInCategory.OST_Ceilings,
-                ["楼梯"] = BuiltInCategory.OST_Stairs,
-                ["栏杆"] = BuiltInCategory.OST_Railings,
-                ["房间"] = BuiltInCategory.OST_Rooms,
-                ["空间"] = BuiltInCategory.OST_MEPSpaces,
-                ["面积"] = BuiltInCategory.OST_Areas,
                 ["结构柱"] = BuiltInCategory.OST_StructuralColumns,
                 ["结构框架"] = BuiltInCategory.OST_StructuralFraming,
                 ["结构基础"] = BuiltInCategory.OST_StructuralFoundation,
@@ -53,7 +38,7 @@ namespace PlugHub.HubeiReportParameters
                 ["通信设备"] = BuiltInCategory.OST_CommunicationDevices
             };
 
-        public static IReadOnlyCollection<BuiltInCategory> Parse(string value, int rowNumber)
+        public static IReadOnlyCollection<string> ParseNames(string value, int rowNumber)
         {
             string[] names = (value ?? string.Empty).Split(',').Select(name => name.Trim()).Where(name => name.Length > 0).ToArray();
             if (names.Length == 0)
@@ -61,21 +46,65 @@ namespace PlugHub.HubeiReportParameters
                 throw new InvalidOperationException("第 " + rowNumber + " 行的 Revit类别不能为空。");
             }
 
-            var result = new List<BuiltInCategory>();
-            foreach (string name in names)
+            return names.Distinct(StringComparer.Ordinal).ToArray();
+        }
+
+        public static void Resolve(Document document, IReadOnlyCollection<HubeiReportTemplateRow> rows)
+        {
+            if (document == null)
             {
-                if (!Categories.TryGetValue(name, out BuiltInCategory category))
+                throw new InvalidOperationException("未收到 Revit 项目，无法解析 Revit类别。");
+            }
+
+            Dictionary<string, Category> categories = document.Settings.Categories
+                .Cast<Category>()
+                .Where(category => category != null && category.AllowsBoundParameters)
+                .GroupBy(category => category.Name, StringComparer.Ordinal)
+                .ToDictionary(group => group.Key, group => group.First(), StringComparer.Ordinal);
+
+            foreach (HubeiReportTemplateRow row in rows)
+            {
+                var resolved = new List<Category>();
+                foreach (string name in row.RevitCategoryNames)
                 {
-                    throw new InvalidOperationException("第 " + rowNumber + " 行的 Revit类别不受支持：" + name + "。");
+                    Category category = ResolveCategory(document, categories, name);
+                    if (category == null)
+                    {
+                        throw new InvalidOperationException("第 " + row.RowNumber + " 行的 Revit类别无法在当前项目中解析：" + name + "。请使用当前 Revit 显示的类别名称。");
+                    }
+
+                    if (resolved.All(item => item.Id.IntegerValue != category.Id.IntegerValue))
+                    {
+                        resolved.Add(category);
+                    }
                 }
 
-                if (!result.Contains(category))
+                if (resolved.Count == 0)
                 {
-                    result.Add(category);
+                    throw new InvalidOperationException("第 " + row.RowNumber + " 行的 Revit类别不能为空。");
+                }
+
+                row.RevitCategories = resolved;
+            }
+        }
+
+        private static Category ResolveCategory(Document document, IReadOnlyDictionary<string, Category> categories, string name)
+        {
+            if (categories.TryGetValue(name, out Category category))
+            {
+                return category;
+            }
+
+            if (Aliases.TryGetValue(name, out BuiltInCategory builtInCategory))
+            {
+                Category aliasCategory = document.Settings.Categories.get_Item(builtInCategory);
+                if (aliasCategory != null && aliasCategory.AllowsBoundParameters)
+                {
+                    return aliasCategory;
                 }
             }
 
-            return result;
+            return null;
         }
     }
 }
