@@ -10,6 +10,8 @@ namespace PlugHub.HubeiReportParameters
         private static readonly IReadOnlyDictionary<string, BuiltInCategory> Aliases =
             new Dictionary<string, BuiltInCategory>(StringComparer.Ordinal)
             {
+                ["地形"] = BuiltInCategory.OST_Topography,
+                ["地形表面"] = BuiltInCategory.OST_Topography,
                 ["结构柱"] = BuiltInCategory.OST_StructuralColumns,
                 ["结构框架"] = BuiltInCategory.OST_StructuralFraming,
                 ["结构基础"] = BuiltInCategory.OST_StructuralFoundation,
