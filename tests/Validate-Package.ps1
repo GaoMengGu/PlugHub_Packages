@@ -736,6 +736,8 @@ Require-Text ".github\workflows\build-package.yml" 'if: github.actor != ''github
 Reject-Text ".github\workflows\build-package.yml" 'if: github.actor != ''github-actions[bot]'' && ((github.event_name == ''push'' && contains(fromJson(''["refs/heads/main","refs/heads/codex","refs/heads/hermes"]''), github.ref)) || (github.event_name == ''workflow_dispatch'' && github.ref == ''refs/heads/main''))' "Package output commit main branch allow-list"
 Reject-Text ".github\workflows\build-package.yml" "(github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')" "Package output commit manual main write-back condition"
 Require-Text ".github\workflows\build-package.yml" 'origin/$githubRefName:refs/heads/$githubRefName' "Gitee working branch mirror refspec"
+Require-Text ".github\workflows\build-package.yml" 'if: github.event_name != ''pull_request'' && github.actor != ''github-actions[bot]'' && ((github.event_name == ''push'' && github.ref_type == ''branch'') || (needs.build.outputs.version_tag != '''' && (github.ref_type == ''tag'' || github.ref == ''refs/heads/main'' || github.event_name == ''workflow_dispatch'')))' "Gitee all-branch mirror rule"
+Reject-Text ".github\workflows\build-package.yml" 'contains(fromJson(''["refs/heads/main","refs/heads/codex","refs/heads/hermes"]''), github.ref)' "Gitee fixed branch mirror allow-list"
 Require-Text ".github\workflows\build-package.yml" 'Sync Gitee release asset' "Gitee release asset sync step"
 
 if ($failures.Count -gt 0) {
