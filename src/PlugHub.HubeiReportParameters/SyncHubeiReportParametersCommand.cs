@@ -43,14 +43,10 @@ namespace PlugHub.HubeiReportParameters
                 }
 
                 IReadOnlyList<HubeiReportTemplateRow> definitions = HubeiReportTemplateReader.MergeParameterRows(template.Rows);
-                HubeiReportResult result = ApplyDefinitions(document, definitions, template.Rows, selection.RemoveExistingParameters);
-                if (selection.CreatePropertySetSchedules)
-                {
-                    result.CreatedScheduleCount = HubeiReportScheduleCreator.Recreate(document, template.Rows);
-                }
+                HubeiReportResult result = ApplyProjectChanges(document, definitions, template.Rows, selection);
 
                 string hifcPath = selection.ExportHifcMappingFile ? WriteHifcFile(document, template.Rows) : string.Empty;
-                ShowResult(result, definitions.Count, hifcPath);
+                ShowResult(result, definitions.Count, hifcPath, selection.CreatePropertySetSchedules, selection.ExportHifcMappingFile);
                 return Result.Succeeded;
             }
             catch (Exception ex)
@@ -89,6 +85,22 @@ namespace PlugHub.HubeiReportParameters
             if (document == null || string.IsNullOrWhiteSpace(document.PathName))
             {
                 throw new InvalidOperationException("请先保存当前 Revit 项目，以便生成 项目名-HIFC.txt。");
+            }
+        }
+
+        private static HubeiReportResult ApplyProjectChanges(Document document, IReadOnlyList<HubeiReportTemplateRow> definitions, IReadOnlyList<HubeiReportTemplateRow> valueRows, HubeiReportSelection selection)
+        {
+            using (var transactionGroup = new TransactionGroup(document, "湖北报规模板同步"))
+            {
+                transactionGroup.Start();
+                HubeiReportResult result = ApplyDefinitions(document, definitions, valueRows, selection.RemoveExistingParameters);
+                if (selection.CreatePropertySetSchedules)
+                {
+                    result.CreatedScheduleCount = HubeiReportScheduleCreator.Recreate(document, valueRows);
+                }
+
+                transactionGroup.Assimilate();
+                return result;
             }
         }
 
@@ -372,20 +384,24 @@ namespace PlugHub.HubeiReportParameters
             return path;
         }
 
-        private static void ShowResult(HubeiReportResult result, int definitionCount, string hifcPath)
+        private static void ShowResult(HubeiReportResult result, int definitionCount, string hifcPath, bool schedulesRequested, bool mappingFileRequested)
         {
-            string message = string.Format(
-                "处理完成。\n创建: {0}\n更新绑定: {1}\n清除同名参数: {2}\n真实数据写入: {3}\n默认值写入: {4}\n未写入: {5}\n参数总数: {6}\nHIFC 文件: {7}",
-                result.CreatedCount,
-                result.UpdatedBindingCount,
-                result.RemovedCount,
-                result.ActualValueCount,
-                result.DefaultValueCount,
-                result.SkippedValueCount,
-                definitionCount,
-                string.IsNullOrWhiteSpace(hifcPath) ? "未导出" : hifcPath);
-            message += "\n创建明细表: " + result.CreatedScheduleCount;
-            TaskDialog.Show("湖北报规参数", message);
+            var message = new StringBuilder();
+            message.AppendLine("参数同步");
+            message.AppendLine("  新建参数: " + result.CreatedCount);
+            message.AppendLine("  更新绑定: " + result.UpdatedBindingCount);
+            message.AppendLine("  清除旧参数: " + result.RemovedCount);
+            message.AppendLine("  参数总数: " + definitionCount);
+            message.AppendLine();
+            message.AppendLine("数据写入");
+            message.AppendLine("  真实数据: " + result.ActualValueCount);
+            message.AppendLine("  默认值: " + result.DefaultValueCount);
+            message.AppendLine("  未写入: " + result.SkippedValueCount);
+            message.AppendLine();
+            message.AppendLine("交付内容");
+            message.AppendLine("  属性集明细表: " + (schedulesRequested ? result.CreatedScheduleCount + " 个" : "未选择"));
+            message.Append("  HIFC 映射文件: " + (mappingFileRequested ? hifcPath : "未选择"));
+            TaskDialog.Show("湖北报规参数 · 完成", message.ToString());
         }
     }
 }

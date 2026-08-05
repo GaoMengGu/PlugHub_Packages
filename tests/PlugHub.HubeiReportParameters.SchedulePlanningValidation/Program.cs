@@ -15,10 +15,10 @@ internal static class Program
                 new HubeiReportScheduleSource("Pset_绿地信息属性集", "投影面积", "Pset_绿地信息属性集_投影面积", -2001260, "地形", false),
                 new HubeiReportScheduleSource("Pset_绿地信息属性集", "投影面积", "Pset_绿地信息属性集_投影面积", -2001260, "地形", false),
                 new HubeiReportScheduleSource("Pset_绿地信息属性集", "绿地类型", "Pset_绿地信息属性集_绿地类型", -2001260, "地形", false),
-                new HubeiReportScheduleSource("Pset_混合属性集", "名称", "Pset_混合属性集_名称", -2001260, "地形", false),
-                new HubeiReportScheduleSource("Pset_混合属性集", "名称", "Pset_混合属性集_名称", -2000011, "墙", false),
                 new HubeiReportScheduleSource("Pset_混合属性集", "编码", "Pset_混合属性集_编码", -2000011, "墙", false),
-                new HubeiReportScheduleSource("Pset_混合属性集", "编码", "Pset_混合属性集_编码", -2003101, "项目信息", true)
+                new HubeiReportScheduleSource("Pset_混合属性集", "编码", "Pset_混合属性集_编码", -2003101, "项目信息", true),
+                new HubeiReportScheduleSource("Pset_混合属性集", "名称", "Pset_混合属性集_名称", -2001260, "地形", false),
+                new HubeiReportScheduleSource("Pset_混合属性集", "名称", "Pset_混合属性集_名称", -2000011, "墙", false)
             });
 
             if (plans.Any(plan => plan.Name == "Pset_申报信息属性集"))
@@ -42,6 +42,30 @@ internal static class Program
             if (mixed.Categories.Count != 2 || mixed.Fields.Count != 2)
             {
                 throw new InvalidOperationException("A property set must retain all non-project-information categories and fields.");
+            }
+
+            if (mixed.FilterParameterName != "Pset_混合属性集_名称")
+            {
+                throw new InvalidOperationException("Multi-category schedules must filter with a parameter bound to every retained category.");
+            }
+
+            bool rejectedIncompleteCoverage = false;
+            try
+            {
+                HubeiReportSchedulePlanner.Build(new[]
+                {
+                    new HubeiReportScheduleSource("Pset_无公共字段", "墙字段", "Pset_无公共字段_墙字段", -2000011, "墙", false),
+                    new HubeiReportScheduleSource("Pset_无公共字段", "地形字段", "Pset_无公共字段_地形字段", -2001260, "地形", false)
+                });
+            }
+            catch (InvalidOperationException)
+            {
+                rejectedIncompleteCoverage = true;
+            }
+
+            if (!rejectedIncompleteCoverage)
+            {
+                throw new InvalidOperationException("Multi-category schedules without a common filter parameter must be rejected.");
             }
 
             Console.WriteLine("Hubei report schedule planning validation passed.");

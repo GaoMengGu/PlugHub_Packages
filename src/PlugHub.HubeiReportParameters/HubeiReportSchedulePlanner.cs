@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace PlugHub.HubeiReportParameters
 {
-    public sealed class HubeiReportScheduleSource
+    internal sealed class HubeiReportScheduleSource
     {
         public HubeiReportScheduleSource(string propertySetName, string propertyName, string parameterName, int categoryId, string categoryName, bool isProjectInformation)
         {
@@ -29,7 +29,7 @@ namespace PlugHub.HubeiReportParameters
         public bool IsProjectInformation { get; }
     }
 
-    public sealed class HubeiReportScheduleCategory
+    internal sealed class HubeiReportScheduleCategory
     {
         public HubeiReportScheduleCategory(int id, string name)
         {
@@ -42,7 +42,7 @@ namespace PlugHub.HubeiReportParameters
         public string Name { get; }
     }
 
-    public sealed class HubeiReportScheduleField
+    internal sealed class HubeiReportScheduleField
     {
         public HubeiReportScheduleField(string parameterName, string heading)
         {
@@ -55,13 +55,14 @@ namespace PlugHub.HubeiReportParameters
         public string Heading { get; }
     }
 
-    public sealed class HubeiReportSchedulePlan
+    internal sealed class HubeiReportSchedulePlan
     {
-        public HubeiReportSchedulePlan(string name, IReadOnlyList<HubeiReportScheduleCategory> categories, IReadOnlyList<HubeiReportScheduleField> fields)
+        public HubeiReportSchedulePlan(string name, IReadOnlyList<HubeiReportScheduleCategory> categories, IReadOnlyList<HubeiReportScheduleField> fields, string filterParameterName)
         {
             Name = name;
             Categories = categories;
             Fields = fields;
+            FilterParameterName = filterParameterName;
         }
 
         public string Name { get; }
@@ -69,9 +70,11 @@ namespace PlugHub.HubeiReportParameters
         public IReadOnlyList<HubeiReportScheduleCategory> Categories { get; }
 
         public IReadOnlyList<HubeiReportScheduleField> Fields { get; }
+
+        public string FilterParameterName { get; }
     }
 
-    public static class HubeiReportSchedulePlanner
+    internal static class HubeiReportSchedulePlanner
     {
         public static IReadOnlyList<HubeiReportSchedulePlan> Build(IEnumerable<HubeiReportScheduleSource> sources)
         {
@@ -83,19 +86,36 @@ namespace PlugHub.HubeiReportParameters
             return sources
                 .Where(source => source != null && !source.IsProjectInformation)
                 .GroupBy(source => source.PropertySetName, StringComparer.Ordinal)
-                .Select(group => new HubeiReportSchedulePlan(
-                    group.Key,
-                    group.GroupBy(source => source.CategoryId)
-                        .Select(categoryGroup => categoryGroup.First())
-                        .Select(source => new HubeiReportScheduleCategory(source.CategoryId, source.CategoryName))
-                        .ToArray(),
-                    group.GroupBy(source => source.ParameterName, StringComparer.Ordinal)
-                        .Select(fieldGroup => fieldGroup.First())
-                        .Select(source => new HubeiReportScheduleField(source.ParameterName, source.PropertyName))
-                        .ToArray()))
+                .Select(CreatePlan)
                 .Where(plan => plan.Categories.Count > 0 && plan.Fields.Count > 0)
                 .OrderBy(plan => plan.Name, StringComparer.Ordinal)
                 .ToArray();
+        }
+
+        private static HubeiReportSchedulePlan CreatePlan(IGrouping<string, HubeiReportScheduleSource> group)
+        {
+            HubeiReportScheduleSource[] sources = group.ToArray();
+            HubeiReportScheduleCategory[] categories = sources
+                .GroupBy(source => source.CategoryId)
+                .Select(categoryGroup => categoryGroup.First())
+                .Select(source => new HubeiReportScheduleCategory(source.CategoryId, source.CategoryName))
+                .ToArray();
+            HubeiReportScheduleField[] fields = sources
+                .GroupBy(source => source.ParameterName, StringComparer.Ordinal)
+                .Select(fieldGroup => fieldGroup.First())
+                .Select(source => new HubeiReportScheduleField(source.ParameterName, source.PropertyName))
+                .ToArray();
+            string filterParameterName = sources
+                .GroupBy(source => source.ParameterName, StringComparer.Ordinal)
+                .Where(fieldGroup => fieldGroup.Select(source => source.CategoryId).Distinct().Count() == categories.Length)
+                .Select(fieldGroup => fieldGroup.Key)
+                .FirstOrDefault();
+            if (categories.Length > 1 && string.IsNullOrEmpty(filterParameterName))
+            {
+                throw new InvalidOperationException("属性集 " + group.Key + " 绑定多个 Revit 类别，但没有一个字段覆盖全部类别，无法创建准确的多类别明细表。");
+            }
+
+            return new HubeiReportSchedulePlan(group.Key, categories, fields, filterParameterName ?? string.Empty);
         }
     }
 }

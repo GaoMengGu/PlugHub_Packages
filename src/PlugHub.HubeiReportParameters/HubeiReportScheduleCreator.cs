@@ -5,7 +5,7 @@ using Autodesk.Revit.DB;
 
 namespace PlugHub.HubeiReportParameters
 {
-    public static class HubeiReportScheduleCreator
+    internal static class HubeiReportScheduleCreator
     {
         public static int Recreate(Document document, IReadOnlyCollection<HubeiReportTemplateRow> rows)
         {
@@ -87,7 +87,7 @@ namespace PlugHub.HubeiReportParameters
             schedule.Name = plan.Name;
             ScheduleDefinition definition = schedule.Definition;
             IList<SchedulableField> schedulableFields = definition.GetSchedulableFields();
-            ScheduleField firstField = null;
+            ScheduleField filterField = null;
             foreach (HubeiReportScheduleField fieldPlan in plan.Fields)
             {
                 SchedulableField schedulableField = schedulableFields.FirstOrDefault(
@@ -99,15 +99,15 @@ namespace PlugHub.HubeiReportParameters
 
                 ScheduleField field = definition.AddField(schedulableField);
                 field.ColumnHeading = fieldPlan.Heading;
-                if (firstField == null)
+                if (string.Equals(fieldPlan.ParameterName, plan.FilterParameterName, StringComparison.Ordinal))
                 {
-                    firstField = field;
+                    filterField = field;
                 }
             }
 
-            if (plan.Categories.Count > 1 && firstField != null)
+            if (plan.Categories.Count > 1 && filterField != null)
             {
-                definition.AddFilter(new ScheduleFilter(firstField.FieldId, ScheduleFilterType.HasParameter));
+                definition.AddFilter(new ScheduleFilter(filterField.FieldId, ScheduleFilterType.HasParameter));
             }
         }
 
