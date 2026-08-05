@@ -7,6 +7,8 @@ namespace PlugHub.HubeiReportParameters
     {
         private readonly TextBox _templatePathTextBox;
         private readonly CheckBox _removeExistingParametersCheckBox;
+        private readonly CheckBox _exportHifcMappingFileCheckBox;
+        private readonly CheckBox _createPropertySetSchedulesCheckBox;
 
         public HubeiReportSelectionForm()
         {
@@ -15,13 +17,13 @@ namespace PlugHub.HubeiReportParameters
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
             MinimizeBox = false;
-            ClientSize = new Size(620, 176);
+            ClientSize = new Size(620, 236);
             Font = new Font("Microsoft YaHei UI", 10F, FontStyle.Regular, GraphicsUnit.Point, 0);
 
             var instructionLabel = new Label
             {
                 AutoSize = false,
-                Text = "选择 CSV 模板，插件将按模板创建共享参数并生成项目 HIFC 映射文件。",
+                Text = "选择 CSV 模板，插件将按模板创建共享参数，并可选生成 HIFC 映射文件和属性集明细表。",
                 Location = new Point(20, 16),
                 Size = new Size(570, 28)
             };
@@ -38,8 +40,23 @@ namespace PlugHub.HubeiReportParameters
                 Location = new Point(20, 96)
             };
 
-            var okButton = new Button { Text = "执行", DialogResult = DialogResult.OK, Location = new Point(424, 132), Size = new Size(80, 30) };
-            var cancelButton = new Button { Text = "取消", DialogResult = DialogResult.Cancel, Location = new Point(514, 132), Size = new Size(80, 30) };
+            _exportHifcMappingFileCheckBox = new CheckBox
+            {
+                AutoSize = true,
+                Text = "导出 TXT 映射文件",
+                Checked = true,
+                Location = new Point(20, 128)
+            };
+
+            _createPropertySetSchedulesCheckBox = new CheckBox
+            {
+                AutoSize = true,
+                Text = "创建属性集明细表（排除项目信息）",
+                Location = new Point(20, 160)
+            };
+
+            var okButton = new Button { Text = "执行", DialogResult = DialogResult.OK, Location = new Point(424, 192), Size = new Size(80, 30) };
+            var cancelButton = new Button { Text = "取消", DialogResult = DialogResult.Cancel, Location = new Point(514, 192), Size = new Size(80, 30) };
 
             AcceptButton = okButton;
             CancelButton = cancelButton;
@@ -48,6 +65,8 @@ namespace PlugHub.HubeiReportParameters
             Controls.Add(_templatePathTextBox);
             Controls.Add(browseButton);
             Controls.Add(_removeExistingParametersCheckBox);
+            Controls.Add(_exportHifcMappingFileCheckBox);
+            Controls.Add(_createPropertySetSchedulesCheckBox);
             Controls.Add(okButton);
             Controls.Add(cancelButton);
         }
@@ -55,7 +74,9 @@ namespace PlugHub.HubeiReportParameters
         public HubeiReportSelection Selection => new HubeiReportSelection
         {
             TemplatePath = _templatePathTextBox.Text,
-            RemoveExistingParameters = _removeExistingParametersCheckBox.Checked
+            RemoveExistingParameters = _removeExistingParametersCheckBox.Checked,
+            ExportHifcMappingFile = _exportHifcMappingFileCheckBox.Checked,
+            CreatePropertySetSchedules = _createPropertySetSchedulesCheckBox.Checked
         };
 
         private void SelectTemplate(object sender, System.EventArgs eventArgs)

@@ -46,6 +46,10 @@ namespace PlugHub.HubeiReportParameters
         public string TemplatePath { get; set; } = string.Empty;
 
         public bool RemoveExistingParameters { get; set; }
+
+        public bool ExportHifcMappingFile { get; set; }
+
+        public bool CreatePropertySetSchedules { get; set; }
     }
 
     public sealed class HubeiReportResult
@@ -61,5 +65,7 @@ namespace PlugHub.HubeiReportParameters
         public int DefaultValueCount { get; set; }
 
         public int SkippedValueCount { get; set; }
+
+        public int CreatedScheduleCount { get; set; }
     }
 }

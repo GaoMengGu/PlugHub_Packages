@@ -31,7 +31,10 @@ namespace PlugHub.HubeiReportParameters
                 }
 
                 Document document = commandData.Application.ActiveUIDocument.Document;
-                EnsureSavedProject(document);
+                if (selection.ExportHifcMappingFile)
+                {
+                    EnsureSavedProject(document);
+                }
                 HubeiReportTemplate template = HubeiReportTemplateReader.Read(selection.TemplatePath);
                 HubeiReportTemplateReader.PrepareForDocument(template, document);
                 if (!ConfirmMergedParameters(template))
@@ -41,7 +44,12 @@ namespace PlugHub.HubeiReportParameters
 
                 IReadOnlyList<HubeiReportTemplateRow> definitions = HubeiReportTemplateReader.MergeParameterRows(template.Rows);
                 HubeiReportResult result = ApplyDefinitions(document, definitions, template.Rows, selection.RemoveExistingParameters);
-                string hifcPath = WriteHifcFile(document, template.Rows);
+                if (selection.CreatePropertySetSchedules)
+                {
+                    result.CreatedScheduleCount = HubeiReportScheduleCreator.Recreate(document, template.Rows);
+                }
+
+                string hifcPath = selection.ExportHifcMappingFile ? WriteHifcFile(document, template.Rows) : string.Empty;
                 ShowResult(result, definitions.Count, hifcPath);
                 return Result.Succeeded;
             }
@@ -375,7 +383,8 @@ namespace PlugHub.HubeiReportParameters
                 result.DefaultValueCount,
                 result.SkippedValueCount,
                 definitionCount,
-                hifcPath);
+                string.IsNullOrWhiteSpace(hifcPath) ? "未导出" : hifcPath);
+            message += "\n创建明细表: " + result.CreatedScheduleCount;
             TaskDialog.Show("湖北报规参数", message);
         }
     }
