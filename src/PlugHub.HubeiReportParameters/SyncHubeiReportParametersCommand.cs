@@ -36,7 +36,7 @@ namespace PlugHub.HubeiReportParameters
                     EnsureSavedProject(document);
                 }
                 HubeiReportTemplate template = HubeiReportTemplateReader.Read(selection.TemplatePath);
-                HubeiReportTemplateReader.PrepareForDocument(template, document, selection.WriteActualValues);
+                HubeiReportTemplateReader.PrepareForDocument(template, document, selection.ValueMode);
                 if (!ConfirmMergedParameters(template))
                 {
                     return Result.Cancelled;
@@ -46,7 +46,7 @@ namespace PlugHub.HubeiReportParameters
                 HubeiReportResult result = ApplyProjectChanges(document, definitions, template.Rows, selection);
 
                 string hifcPath = selection.ExportHifcMappingFile ? WriteHifcFile(document, template.Rows) : string.Empty;
-                ShowResult(result, definitions.Count, hifcPath, selection.WriteActualValues, selection.CreatePropertySetSchedules, selection.ExportHifcMappingFile);
+                ShowResult(result, definitions.Count, hifcPath, selection.ValueMode, selection.CreatePropertySetSchedules, selection.ExportHifcMappingFile);
                 return Result.Succeeded;
             }
             catch (Exception ex)
@@ -93,7 +93,7 @@ namespace PlugHub.HubeiReportParameters
             using (var transactionGroup = new TransactionGroup(document, "湖北报规模板同步"))
             {
                 transactionGroup.Start();
-                HubeiReportResult result = ApplyDefinitions(document, definitions, valueRows, selection.RemoveExistingParameters, selection.WriteActualValues);
+                HubeiReportResult result = ApplyDefinitions(document, definitions, valueRows, selection.RemoveExistingParameters, selection.ValueMode);
                 if (selection.CreatePropertySetSchedules)
                 {
                     result.CreatedScheduleCount = HubeiReportScheduleCreator.Recreate(document, valueRows);
@@ -104,7 +104,7 @@ namespace PlugHub.HubeiReportParameters
             }
         }
 
-        private static HubeiReportResult ApplyDefinitions(Document document, IReadOnlyList<HubeiReportTemplateRow> definitions, IReadOnlyList<HubeiReportTemplateRow> valueRows, bool removeExistingParameters, bool writeActualValues)
+        private static HubeiReportResult ApplyDefinitions(Document document, IReadOnlyList<HubeiReportTemplateRow> definitions, IReadOnlyList<HubeiReportTemplateRow> valueRows, bool removeExistingParameters, HubeiReportValueMode valueMode)
         {
             var result = new HubeiReportResult();
             string sharedFilePath = Path.Combine(Path.GetTempPath(), "PlugHub.HubeiReportParameters.shared");
@@ -132,15 +132,18 @@ namespace PlugHub.HubeiReportParameters
                     transaction.Commit();
                 }
 
-                using (var transaction = new Transaction(document, "湖北报规模板参数赋值"))
+                if (valueMode != HubeiReportValueMode.None)
                 {
-                    transaction.Start();
-                    foreach (HubeiReportTemplateRow definition in valueRows)
+                    using (var transaction = new Transaction(document, "湖北报规模板参数赋值"))
                     {
-                        FillValues(document, definition, writeActualValues, result);
-                    }
+                        transaction.Start();
+                        foreach (HubeiReportTemplateRow definition in valueRows)
+                        {
+                            FillValues(document, definition, valueMode, result);
+                        }
 
-                    transaction.Commit();
+                        transaction.Commit();
+                    }
                 }
             }
             finally
@@ -288,10 +291,16 @@ namespace PlugHub.HubeiReportParameters
             }
         }
 
-        private static void FillValues(Document document, HubeiReportTemplateRow definition, bool writeActualValues, HubeiReportResult result)
+        private static void FillValues(Document document, HubeiReportTemplateRow definition, HubeiReportValueMode valueMode, HubeiReportResult result)
         {
-            bool hasActualValue = writeActualValues && !string.IsNullOrWhiteSpace(definition.ActualValue);
-            string value = hasActualValue ? definition.ActualValue : definition.DefaultValue;
+            if (!definition.HasValue(valueMode))
+            {
+                result.SkippedValueCount += CollectTargetElements(document, definition).Count();
+                return;
+            }
+
+            bool hasActualValue = definition.UsesActualValue(valueMode);
+            string value = definition.GetValue(valueMode);
             foreach (Element element in CollectTargetElements(document, definition))
             {
                 Parameter parameter = element.LookupParameter(definition.RevitParameterName);
@@ -385,7 +394,7 @@ namespace PlugHub.HubeiReportParameters
             return path;
         }
 
-        private static void ShowResult(HubeiReportResult result, int definitionCount, string hifcPath, bool actualValuesRequested, bool schedulesRequested, bool mappingFileRequested)
+        private static void ShowResult(HubeiReportResult result, int definitionCount, string hifcPath, HubeiReportValueMode valueMode, bool schedulesRequested, bool mappingFileRequested)
         {
             var message = new StringBuilder();
             message.AppendLine("参数同步");
@@ -395,9 +404,17 @@ namespace PlugHub.HubeiReportParameters
             message.AppendLine("  参数总数: " + definitionCount);
             message.AppendLine();
             message.AppendLine("数据写入");
-            message.AppendLine("  真实数据: " + (actualValuesRequested ? result.ActualValueCount.ToString() : "未选择"));
-            message.AppendLine("  默认值: " + result.DefaultValueCount);
-            message.AppendLine("  未写入: " + result.SkippedValueCount);
+            if (valueMode == HubeiReportValueMode.None)
+            {
+                message.AppendLine("  写入模式: 不写入数据");
+            }
+            else
+            {
+                message.AppendLine("  写入模式: " + (valueMode == HubeiReportValueMode.ActualValue ? "真实数据" : "默认值"));
+                message.AppendLine("  真实数据: " + result.ActualValueCount);
+                message.AppendLine("  默认值: " + result.DefaultValueCount);
+                message.AppendLine("  未写入: " + result.SkippedValueCount);
+            }
             message.AppendLine();
             message.AppendLine("交付内容");
             message.AppendLine("  属性集明细表: " + (schedulesRequested ? result.CreatedScheduleCount + " 个" : "未选择"));

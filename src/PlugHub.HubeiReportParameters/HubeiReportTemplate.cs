@@ -55,7 +55,7 @@ namespace PlugHub.HubeiReportParameters
             return new HubeiReportTemplate { FilePath = filePath, Rows = rows };
         }
 
-        public static void PrepareForDocument(HubeiReportTemplate template, Document document, bool writeActualValues)
+        public static void PrepareForDocument(HubeiReportTemplate template, Document document, HubeiReportValueMode valueMode)
         {
             if (template == null || document == null)
             {
@@ -64,7 +64,7 @@ namespace PlugHub.HubeiReportParameters
 
             RevitCategoryCatalog.Resolve(document, template.Rows);
             ResolveRevitParameterNames(template.Rows);
-            ValidateDuplicateNames(template.Rows, writeActualValues);
+            ValidateDuplicateNames(template.Rows, valueMode);
         }
 
         public static IReadOnlyList<HubeiReportTemplateRow> MergeParameterRows(IReadOnlyCollection<HubeiReportTemplateRow> rows)
@@ -128,7 +128,7 @@ namespace PlugHub.HubeiReportParameters
             };
         }
 
-        private static void ValidateDuplicateNames(IReadOnlyCollection<HubeiReportTemplateRow> rows, bool writeActualValues)
+        private static void ValidateDuplicateNames(IReadOnlyCollection<HubeiReportTemplateRow> rows, HubeiReportValueMode valueMode)
         {
             foreach (IGrouping<string, HubeiReportTemplateRow> group in rows.GroupBy(row => row.RevitParameterName, StringComparer.Ordinal))
             {
@@ -139,20 +139,26 @@ namespace PlugHub.HubeiReportParameters
                 }
             }
 
+            if (valueMode == HubeiReportValueMode.None)
+            {
+                return;
+            }
+
             foreach (var group in rows
                 .SelectMany(row => row.RevitCategories.Select(category => new { row, category }))
                 .GroupBy(item => item.row.RevitParameterName + "|" + item.category, StringComparer.Ordinal))
             {
                 string[] values = group
-                    .Select(item => writeActualValues && !string.IsNullOrWhiteSpace(item.row.ActualValue)
-                        ? item.row.ActualValue
-                        : item.row.DefaultValue)
+                    .Where(item => item.row.HasValue(valueMode))
+                    .Select(item => item.row.GetValue(valueMode))
                     .Distinct(StringComparer.Ordinal)
                     .ToArray();
                 if (values.Length > 1)
                 {
                     HubeiReportTemplateRow first = group.First().row;
-                    string valueKind = writeActualValues ? "有效数据（真实数据优先、默认值兜底）" : "默认值";
+                    string valueKind = valueMode == HubeiReportValueMode.ActualValue
+                        ? "非空真实数据"
+                        : "默认值";
                     throw new InvalidOperationException("Revit 参数 " + first.RevitParameterName + " 在同一 Revit类别中存在不同的" + valueKind + "，请修改模板后重试。");
                 }
             }
