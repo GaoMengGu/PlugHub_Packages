@@ -155,6 +155,11 @@ jobs:
         working-directory: PlugHub_Packages
         run: .\tests\Validate-Package.ps1
 
+      - name: Validate Hubei schedule planning
+        shell: pwsh
+        working-directory: PlugHub_Packages
+        run: dotnet run --project .\tests\PlugHub.HubeiReportParameters.SchedulePlanningValidation\PlugHub.HubeiReportParameters.SchedulePlanningValidation.csproj -c Release
+
       - name: Upload package artifact
         uses: actions/upload-artifact@v4
         with:
@@ -245,7 +250,7 @@ jobs:
   mirror-gitee:
     name: Mirror final refs and release to Gitee
     needs: build
-    if: github.event_name != 'pull_request' && github.actor != 'github-actions[bot]' && ((github.event_name == 'push' && contains(fromJson('["refs/heads/main","refs/heads/codex","refs/heads/hermes"]'), github.ref)) || (needs.build.outputs.version_tag != '' && (github.ref_type == 'tag' || github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch')))
+    if: github.event_name != 'pull_request' && github.actor != 'github-actions[bot]' && ((github.event_name == 'push' && github.ref_type == 'branch') || (needs.build.outputs.version_tag != '' && (github.ref_type == 'tag' || github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch')))
     runs-on: ubuntu-latest
 
     steps:

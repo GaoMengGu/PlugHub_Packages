@@ -31,18 +31,22 @@ namespace PlugHub.HubeiReportParameters
                 }
 
                 Document document = commandData.Application.ActiveUIDocument.Document;
-                EnsureSavedProject(document);
+                if (selection.ExportHifcMappingFile)
+                {
+                    EnsureSavedProject(document);
+                }
                 HubeiReportTemplate template = HubeiReportTemplateReader.Read(selection.TemplatePath);
-                HubeiReportTemplateReader.PrepareForDocument(template, document);
+                HubeiReportTemplateReader.PrepareForDocument(template, document, selection.WriteActualValues);
                 if (!ConfirmMergedParameters(template))
                 {
                     return Result.Cancelled;
                 }
 
                 IReadOnlyList<HubeiReportTemplateRow> definitions = HubeiReportTemplateReader.MergeParameterRows(template.Rows);
-                HubeiReportResult result = ApplyDefinitions(document, definitions, template.Rows, selection.RemoveExistingParameters);
-                string hifcPath = WriteHifcFile(document, template.Rows);
-                ShowResult(result, definitions.Count, hifcPath);
+                HubeiReportResult result = ApplyProjectChanges(document, definitions, template.Rows, selection);
+
+                string hifcPath = selection.ExportHifcMappingFile ? WriteHifcFile(document, template.Rows) : string.Empty;
+                ShowResult(result, definitions.Count, hifcPath, selection.WriteActualValues, selection.CreatePropertySetSchedules, selection.ExportHifcMappingFile);
                 return Result.Succeeded;
             }
             catch (Exception ex)
@@ -84,7 +88,23 @@ namespace PlugHub.HubeiReportParameters
             }
         }
 
-        private static HubeiReportResult ApplyDefinitions(Document document, IReadOnlyList<HubeiReportTemplateRow> definitions, IReadOnlyList<HubeiReportTemplateRow> valueRows, bool removeExistingParameters)
+        private static HubeiReportResult ApplyProjectChanges(Document document, IReadOnlyList<HubeiReportTemplateRow> definitions, IReadOnlyList<HubeiReportTemplateRow> valueRows, HubeiReportSelection selection)
+        {
+            using (var transactionGroup = new TransactionGroup(document, "湖北报规模板同步"))
+            {
+                transactionGroup.Start();
+                HubeiReportResult result = ApplyDefinitions(document, definitions, valueRows, selection.RemoveExistingParameters, selection.WriteActualValues);
+                if (selection.CreatePropertySetSchedules)
+                {
+                    result.CreatedScheduleCount = HubeiReportScheduleCreator.Recreate(document, valueRows);
+                }
+
+                transactionGroup.Assimilate();
+                return result;
+            }
+        }
+
+        private static HubeiReportResult ApplyDefinitions(Document document, IReadOnlyList<HubeiReportTemplateRow> definitions, IReadOnlyList<HubeiReportTemplateRow> valueRows, bool removeExistingParameters, bool writeActualValues)
         {
             var result = new HubeiReportResult();
             string sharedFilePath = Path.Combine(Path.GetTempPath(), "PlugHub.HubeiReportParameters.shared");
@@ -117,7 +137,7 @@ namespace PlugHub.HubeiReportParameters
                     transaction.Start();
                     foreach (HubeiReportTemplateRow definition in valueRows)
                     {
-                        FillValues(document, definition, result);
+                        FillValues(document, definition, writeActualValues, result);
                     }
 
                     transaction.Commit();
@@ -268,13 +288,14 @@ namespace PlugHub.HubeiReportParameters
             }
         }
 
-        private static void FillValues(Document document, HubeiReportTemplateRow definition, HubeiReportResult result)
+        private static void FillValues(Document document, HubeiReportTemplateRow definition, bool writeActualValues, HubeiReportResult result)
         {
-            bool hasActualValue = !string.IsNullOrWhiteSpace(definition.ActualValue);
+            bool hasActualValue = writeActualValues && !string.IsNullOrWhiteSpace(definition.ActualValue);
+            string value = hasActualValue ? definition.ActualValue : definition.DefaultValue;
             foreach (Element element in CollectTargetElements(document, definition))
             {
                 Parameter parameter = element.LookupParameter(definition.RevitParameterName);
-                if (parameter == null || parameter.IsReadOnly || !TrySetValue(parameter, definition.Value))
+                if (parameter == null || parameter.IsReadOnly || !TrySetValue(parameter, value))
                 {
                     result.SkippedValueCount++;
                     continue;
@@ -364,19 +385,24 @@ namespace PlugHub.HubeiReportParameters
             return path;
         }
 
-        private static void ShowResult(HubeiReportResult result, int definitionCount, string hifcPath)
+        private static void ShowResult(HubeiReportResult result, int definitionCount, string hifcPath, bool actualValuesRequested, bool schedulesRequested, bool mappingFileRequested)
         {
-            string message = string.Format(
-                "处理完成。\n创建: {0}\n更新绑定: {1}\n清除同名参数: {2}\n真实数据写入: {3}\n默认值写入: {4}\n未写入: {5}\n参数总数: {6}\nHIFC 文件: {7}",
-                result.CreatedCount,
-                result.UpdatedBindingCount,
-                result.RemovedCount,
-                result.ActualValueCount,
-                result.DefaultValueCount,
-                result.SkippedValueCount,
-                definitionCount,
-                hifcPath);
-            TaskDialog.Show("湖北报规参数", message);
+            var message = new StringBuilder();
+            message.AppendLine("参数同步");
+            message.AppendLine("  新建参数: " + result.CreatedCount);
+            message.AppendLine("  更新绑定: " + result.UpdatedBindingCount);
+            message.AppendLine("  清除旧参数: " + result.RemovedCount);
+            message.AppendLine("  参数总数: " + definitionCount);
+            message.AppendLine();
+            message.AppendLine("数据写入");
+            message.AppendLine("  真实数据: " + (actualValuesRequested ? result.ActualValueCount.ToString() : "未选择"));
+            message.AppendLine("  默认值: " + result.DefaultValueCount);
+            message.AppendLine("  未写入: " + result.SkippedValueCount);
+            message.AppendLine();
+            message.AppendLine("交付内容");
+            message.AppendLine("  属性集明细表: " + (schedulesRequested ? result.CreatedScheduleCount + " 个" : "未选择"));
+            message.Append("  HIFC 映射文件: " + (mappingFileRequested ? hifcPath : "未选择"));
+            TaskDialog.Show("湖北报规参数 · 完成", message.ToString());
         }
     }
 }

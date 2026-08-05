@@ -1,3 +1,4 @@
+using System;
 using System.Drawing;
 using System.Windows.Forms;
 
@@ -5,8 +6,18 @@ namespace PlugHub.HubeiReportParameters
 {
     public sealed class HubeiReportSelectionForm : Form
     {
+        private static readonly Color PrimaryColor = Color.FromArgb(30, 58, 95);
+        private static readonly Color AccentColor = Color.FromArgb(37, 99, 235);
+        private static readonly Color BackgroundColor = Color.FromArgb(248, 250, 252);
+        private static readonly Color BorderColor = Color.FromArgb(226, 232, 240);
+        private static readonly Color TextColor = Color.FromArgb(15, 23, 42);
+        private static readonly Color MutedTextColor = Color.FromArgb(100, 116, 139);
         private readonly TextBox _templatePathTextBox;
         private readonly CheckBox _removeExistingParametersCheckBox;
+        private readonly CheckBox _writeActualValuesCheckBox;
+        private readonly CheckBox _exportHifcMappingFileCheckBox;
+        private readonly CheckBox _createPropertySetSchedulesCheckBox;
+        private readonly Button _executeButton;
 
         public HubeiReportSelectionForm()
         {
@@ -15,50 +26,197 @@ namespace PlugHub.HubeiReportParameters
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
             MinimizeBox = false;
-            ClientSize = new Size(620, 176);
-            Font = new Font("Microsoft YaHei UI", 10F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            ShowInTaskbar = false;
+            AutoScaleMode = AutoScaleMode.Dpi;
+            ClientSize = new Size(680, 500);
+            BackColor = BackgroundColor;
+            Font = new Font("Microsoft YaHei UI", 9.5F, FontStyle.Regular, GraphicsUnit.Point, 0);
 
-            var instructionLabel = new Label
+            Panel headerPanel = CreateHeaderPanel();
+            var contentPanel = new Panel
             {
-                AutoSize = false,
-                Text = "选择 CSV 模板，插件将按模板创建共享参数并生成项目 HIFC 映射文件。",
-                Location = new Point(20, 16),
-                Size = new Size(570, 28)
+                Dock = DockStyle.Fill,
+                BackColor = BackgroundColor,
+                Padding = new Padding(24, 16, 24, 18)
             };
 
-            var templateLabel = new Label { AutoSize = true, Text = "模板文件", Location = new Point(20, 57) };
-            _templatePathTextBox = new TextBox { Location = new Point(92, 53), Size = new Size(410, 26), ReadOnly = true };
-            var browseButton = new Button { Text = "选择...", Location = new Point(514, 52), Size = new Size(80, 29) };
-            browseButton.Click += SelectTemplate;
-
-            _removeExistingParametersCheckBox = new CheckBox
+            GroupBox templateSection = CreateSection("1  选择参数模板", new Rectangle(24, 14, 632, 90));
+            var templateLabel = new Label
             {
                 AutoSize = true,
-                Text = "清除当前项目同名参数",
-                Location = new Point(20, 96)
+                Text = "CSV 文件",
+                ForeColor = TextColor,
+                Location = new Point(16, 38)
             };
+            _templatePathTextBox = new TextBox
+            {
+                Location = new Point(82, 34),
+                Size = new Size(430, 28),
+                ReadOnly = true,
+                BackColor = Color.White,
+                BorderStyle = BorderStyle.FixedSingle,
+                AccessibleName = "湖北报规 CSV 模板路径"
+            };
+            _templatePathTextBox.TextChanged += UpdateExecutionState;
+            Button browseButton = CreateButton("选择文件", AccentColor, Color.White, new Rectangle(524, 32, 88, 32));
+            browseButton.AccessibleDescription = "选择本地湖北报规 CSV 参数模板";
+            browseButton.Click += SelectTemplate;
+            templateSection.Controls.Add(templateLabel);
+            templateSection.Controls.Add(_templatePathTextBox);
+            templateSection.Controls.Add(browseButton);
 
-            var okButton = new Button { Text = "执行", DialogResult = DialogResult.OK, Location = new Point(424, 132), Size = new Size(80, 30) };
-            var cancelButton = new Button { Text = "取消", DialogResult = DialogResult.Cancel, Location = new Point(514, 132), Size = new Size(80, 30) };
+            GroupBox parameterSection = CreateSection("2  参数与数据", new Rectangle(24, 116, 632, 100));
+            _removeExistingParametersCheckBox = CreateCheckBox("清除当前项目同名参数", new Point(18, 30));
+            var parameterHint = new Label
+            {
+                AutoSize = true,
+                Text = "仅在需要重建旧参数定义或绑定时勾选",
+                ForeColor = MutedTextColor,
+                Location = new Point(246, 32)
+            };
+            _writeActualValuesCheckBox = CreateCheckBox("写入模板真实数据", new Point(18, 58));
+            _writeActualValuesCheckBox.Checked = true;
+            var actualValueHint = new Label
+            {
+                AutoSize = true,
+                Text = "未勾选时仅使用模板默认值",
+                ForeColor = MutedTextColor,
+                Location = new Point(246, 60)
+            };
+            parameterSection.Controls.Add(_removeExistingParametersCheckBox);
+            parameterSection.Controls.Add(parameterHint);
+            parameterSection.Controls.Add(_writeActualValuesCheckBox);
+            parameterSection.Controls.Add(actualValueHint);
 
-            AcceptButton = okButton;
+            GroupBox outputSection = CreateSection("3  输出内容", new Rectangle(24, 228, 632, 116));
+            _exportHifcMappingFileCheckBox = CreateCheckBox("导出项目名-HIFC.txt 映射文件", new Point(18, 30));
+            _exportHifcMappingFileCheckBox.Checked = true;
+            _createPropertySetSchedulesCheckBox = CreateCheckBox("创建属性集明细表", new Point(18, 58));
+            var scheduleHint = new Label
+            {
+                AutoSize = false,
+                Text = "项目信息不创建明细表；已有同名属性集明细表将按当前模板重建。",
+                ForeColor = MutedTextColor,
+                Location = new Point(38, 84),
+                Size = new Size(560, 22)
+            };
+            outputSection.Controls.Add(_exportHifcMappingFileCheckBox);
+            outputSection.Controls.Add(_createPropertySetSchedulesCheckBox);
+            outputSection.Controls.Add(scheduleHint);
+
+            var divider = new Panel
+            {
+                BackColor = BorderColor,
+                Location = new Point(24, 360),
+                Size = new Size(632, 1)
+            };
+            _executeButton = CreateButton("开始执行", AccentColor, Color.White, new Rectangle(454, 378, 96, 34));
+            _executeButton.DialogResult = DialogResult.OK;
+            _executeButton.Enabled = false;
+            var cancelButton = CreateButton("取消", Color.White, TextColor, new Rectangle(560, 378, 96, 34));
+            cancelButton.DialogResult = DialogResult.Cancel;
+            cancelButton.FlatAppearance.BorderColor = BorderColor;
+
+            contentPanel.Controls.Add(templateSection);
+            contentPanel.Controls.Add(parameterSection);
+            contentPanel.Controls.Add(outputSection);
+            contentPanel.Controls.Add(divider);
+            contentPanel.Controls.Add(_executeButton);
+            contentPanel.Controls.Add(cancelButton);
+            Controls.Add(contentPanel);
+            Controls.Add(headerPanel);
+
+            AcceptButton = _executeButton;
             CancelButton = cancelButton;
-            Controls.Add(instructionLabel);
-            Controls.Add(templateLabel);
-            Controls.Add(_templatePathTextBox);
-            Controls.Add(browseButton);
-            Controls.Add(_removeExistingParametersCheckBox);
-            Controls.Add(okButton);
-            Controls.Add(cancelButton);
         }
 
         public HubeiReportSelection Selection => new HubeiReportSelection
         {
             TemplatePath = _templatePathTextBox.Text,
-            RemoveExistingParameters = _removeExistingParametersCheckBox.Checked
+            RemoveExistingParameters = _removeExistingParametersCheckBox.Checked,
+            WriteActualValues = _writeActualValuesCheckBox.Checked,
+            ExportHifcMappingFile = _exportHifcMappingFileCheckBox.Checked,
+            CreatePropertySetSchedules = _createPropertySetSchedulesCheckBox.Checked
         };
 
-        private void SelectTemplate(object sender, System.EventArgs eventArgs)
+        private static Panel CreateHeaderPanel()
+        {
+            var panel = new Panel { Dock = DockStyle.Top, Height = 62, BackColor = PrimaryColor };
+            var title = new Label
+            {
+                AutoSize = true,
+                Text = "湖北报规参数",
+                ForeColor = Color.White,
+                Font = new Font("Microsoft YaHei UI", 16F, FontStyle.Bold, GraphicsUnit.Point, 0),
+                Location = new Point(24, 10)
+            };
+            var subtitle = new Label
+            {
+                AutoSize = true,
+                Text = "根据 CSV 模板同步共享参数、赋值并生成交付内容",
+                ForeColor = Color.FromArgb(219, 234, 254),
+                Location = new Point(26, 38)
+            };
+            panel.Controls.Add(title);
+            panel.Controls.Add(subtitle);
+            return panel;
+        }
+
+        private static GroupBox CreateSection(string title, Rectangle bounds)
+        {
+            return new GroupBox
+            {
+                Text = title,
+                Bounds = bounds,
+                BackColor = Color.White,
+                ForeColor = PrimaryColor,
+                Font = new Font("Microsoft YaHei UI", 9.5F, FontStyle.Bold, GraphicsUnit.Point, 0),
+                Padding = new Padding(12)
+            };
+        }
+
+        private static CheckBox CreateCheckBox(string text, Point location)
+        {
+            return new CheckBox
+            {
+                AutoSize = true,
+                Text = text,
+                ForeColor = TextColor,
+                Font = new Font("Microsoft YaHei UI", 9.5F, FontStyle.Regular, GraphicsUnit.Point, 0),
+                Location = location,
+                UseVisualStyleBackColor = true
+            };
+        }
+
+        private static Button CreateButton(string text, Color backColor, Color foreColor, Rectangle bounds)
+        {
+            var button = new Button
+            {
+                Text = text,
+                Bounds = bounds,
+                BackColor = backColor,
+                ForeColor = foreColor,
+                FlatStyle = FlatStyle.Flat,
+                Cursor = Cursors.Hand,
+                Font = new Font("Microsoft YaHei UI", 9.5F, FontStyle.Bold, GraphicsUnit.Point, 0),
+                UseVisualStyleBackColor = false
+            };
+            button.FlatAppearance.BorderSize = backColor == Color.White ? 1 : 0;
+            button.FlatAppearance.MouseOverBackColor = backColor == Color.White
+                ? Color.FromArgb(241, 245, 249)
+                : Color.FromArgb(29, 78, 216);
+            button.FlatAppearance.MouseDownBackColor = backColor == Color.White
+                ? Color.FromArgb(226, 232, 240)
+                : Color.FromArgb(30, 64, 175);
+            return button;
+        }
+
+        private void UpdateExecutionState(object sender, EventArgs eventArgs)
+        {
+            _executeButton.Enabled = !string.IsNullOrWhiteSpace(_templatePathTextBox.Text);
+        }
+
+        private void SelectTemplate(object sender, EventArgs eventArgs)
         {
             using (var dialog = new OpenFileDialog())
             {
