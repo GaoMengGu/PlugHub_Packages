@@ -14,6 +14,7 @@ namespace PlugHub.HubeiReportParameters
         private static readonly Color MutedTextColor = Color.FromArgb(100, 116, 139);
         private readonly TextBox _templatePathTextBox;
         private readonly CheckBox _removeExistingParametersCheckBox;
+        private readonly CheckBox _writeActualValuesCheckBox;
         private readonly CheckBox _exportHifcMappingFileCheckBox;
         private readonly CheckBox _createPropertySetSchedulesCheckBox;
         private readonly Button _executeButton;
@@ -27,7 +28,7 @@ namespace PlugHub.HubeiReportParameters
             MinimizeBox = false;
             ShowInTaskbar = false;
             AutoScaleMode = AutoScaleMode.Dpi;
-            ClientSize = new Size(680, 462);
+            ClientSize = new Size(680, 500);
             BackColor = BackgroundColor;
             Font = new Font("Microsoft YaHei UI", 9.5F, FontStyle.Regular, GraphicsUnit.Point, 0);
 
@@ -64,19 +65,30 @@ namespace PlugHub.HubeiReportParameters
             templateSection.Controls.Add(_templatePathTextBox);
             templateSection.Controls.Add(browseButton);
 
-            GroupBox parameterSection = CreateSection("2  参数处理", new Rectangle(24, 116, 632, 72));
-            _removeExistingParametersCheckBox = CreateCheckBox("清除当前项目同名参数", new Point(18, 32));
+            GroupBox parameterSection = CreateSection("2  参数与数据", new Rectangle(24, 116, 632, 100));
+            _removeExistingParametersCheckBox = CreateCheckBox("清除当前项目同名参数", new Point(18, 30));
             var parameterHint = new Label
             {
                 AutoSize = true,
                 Text = "仅在需要重建旧参数定义或绑定时勾选",
                 ForeColor = MutedTextColor,
-                Location = new Point(246, 34)
+                Location = new Point(246, 32)
+            };
+            _writeActualValuesCheckBox = CreateCheckBox("写入模板真实数据", new Point(18, 58));
+            _writeActualValuesCheckBox.Checked = true;
+            var actualValueHint = new Label
+            {
+                AutoSize = true,
+                Text = "未勾选时仅使用模板默认值",
+                ForeColor = MutedTextColor,
+                Location = new Point(246, 60)
             };
             parameterSection.Controls.Add(_removeExistingParametersCheckBox);
             parameterSection.Controls.Add(parameterHint);
+            parameterSection.Controls.Add(_writeActualValuesCheckBox);
+            parameterSection.Controls.Add(actualValueHint);
 
-            GroupBox outputSection = CreateSection("3  输出内容", new Rectangle(24, 200, 632, 116));
+            GroupBox outputSection = CreateSection("3  输出内容", new Rectangle(24, 228, 632, 116));
             _exportHifcMappingFileCheckBox = CreateCheckBox("导出项目名-HIFC.txt 映射文件", new Point(18, 30));
             _exportHifcMappingFileCheckBox.Checked = true;
             _createPropertySetSchedulesCheckBox = CreateCheckBox("创建属性集明细表", new Point(18, 58));
@@ -95,13 +107,13 @@ namespace PlugHub.HubeiReportParameters
             var divider = new Panel
             {
                 BackColor = BorderColor,
-                Location = new Point(24, 332),
+                Location = new Point(24, 360),
                 Size = new Size(632, 1)
             };
-            _executeButton = CreateButton("开始执行", AccentColor, Color.White, new Rectangle(454, 350, 96, 34));
+            _executeButton = CreateButton("开始执行", AccentColor, Color.White, new Rectangle(454, 378, 96, 34));
             _executeButton.DialogResult = DialogResult.OK;
             _executeButton.Enabled = false;
-            var cancelButton = CreateButton("取消", Color.White, TextColor, new Rectangle(560, 350, 96, 34));
+            var cancelButton = CreateButton("取消", Color.White, TextColor, new Rectangle(560, 378, 96, 34));
             cancelButton.DialogResult = DialogResult.Cancel;
             cancelButton.FlatAppearance.BorderColor = BorderColor;
 
@@ -122,6 +134,7 @@ namespace PlugHub.HubeiReportParameters
         {
             TemplatePath = _templatePathTextBox.Text,
             RemoveExistingParameters = _removeExistingParametersCheckBox.Checked,
+            WriteActualValues = _writeActualValuesCheckBox.Checked,
             ExportHifcMappingFile = _exportHifcMappingFileCheckBox.Checked,
             CreatePropertySetSchedules = _createPropertySetSchedulesCheckBox.Checked
         };

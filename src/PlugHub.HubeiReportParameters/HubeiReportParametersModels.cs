@@ -30,8 +30,6 @@ namespace PlugHub.HubeiReportParameters
         public string ActualValue { get; set; } = string.Empty;
 
         public bool IsInstanceBinding => BindingKind == "I";
-
-        public string Value => string.IsNullOrWhiteSpace(ActualValue) ? DefaultValue : ActualValue;
     }
 
     public sealed class HubeiReportTemplate
@@ -46,6 +44,8 @@ namespace PlugHub.HubeiReportParameters
         public string TemplatePath { get; set; } = string.Empty;
 
         public bool RemoveExistingParameters { get; set; }
+
+        public bool WriteActualValues { get; set; }
 
         public bool ExportHifcMappingFile { get; set; }
 

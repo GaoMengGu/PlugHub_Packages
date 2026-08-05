@@ -23,7 +23,7 @@ namespace PlugHub.HubeiReportParameters
                         Id = "plughub.modules.hubei-report-parameters.sync",
                         ModuleId = "plughub.modules.hubei-report-parameters",
                         Name = "湖北报规参数",
-                        Description = "选择 CSV 模板后创建或更新当前项目共享参数，按真实数据或默认值赋值并生成项目 HIFC 映射文件。",
+                        Description = "选择 CSV 模板后创建或更新当前项目共享参数，可选择写入真实数据，并按需生成明细表和 HIFC 映射文件。",
                         Category = "civil",
                         Group = "土建工具",
                         Tags = new[] { "civil", "hubei", "report", "planning", "parameter", "shared-parameter" },
