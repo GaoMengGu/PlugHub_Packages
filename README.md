@@ -94,4 +94,4 @@ PlugHub 默认公开仓库源使用 Gitee，普通用户优先配置：
 
 如果使用 AI agent 辅助编写插件，推荐尝试安装并使用 [GaoMengGu/PlugHub_Packages_skill](https://github.com/GaoMengGu/PlugHub_Packages_skill)，让 agent 按本仓库约定生成模块代码、清单记录和验证步骤。
 
-更多目录约定和清单字段说明见 [DEVELOPMENT.md](DEVELOPMENT.md)。
+开发说明、图标规范和分支命名约定统一保存在本地 `docs/` 目录，文档资料不随插件包发布。
