@@ -13,7 +13,6 @@ namespace PlugHub.GridVisibility
                 Id = "plughub.modules.grid-visibility",
                 Name = "视图工具",
                 Description = "当前视图轴网显示控制工具。",
-                State = ModuleState.Enabled,
                 Order = 200,
                 Tags = new[] { "view", "grid", "visibility", "revit-api" },
                 Features = new List<FeatureDescriptor>
@@ -28,7 +27,6 @@ namespace PlugHub.GridVisibility
                         Group = "视图工具",
                         Tags = new[] { "view", "grid", "visibility", "frequent" },
                         Order = 210,
-                        DefaultState = FeatureState.Visible,
                         ButtonSize = "large",
                         CommandKey = "plughub.modules.grid-visibility.toggle",
                         CommandAssembly = "dist/PlugHub.GridVisibility.dll",

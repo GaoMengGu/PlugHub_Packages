@@ -1,6 +1,6 @@
 # PlugHub Packages
 
-PlugHub Packages 是 [PlugHub](https://github.com/GaoMengGu/PlugHub) 的外部插件包仓库，用于独立开发、构建和分发 Revit 业务功能。PlugHub 主框架负责模块发现、启用状态、Ribbon 组合和 Revit 入口适配，本仓库只保存可被 PlugHub 加载的功能模块。
+PlugHub Packages 是 [PlugHub](https://github.com/GaoMengGu/PlugHub) 的外部插件包仓库，用于独立开发、构建和分发 Revit 业务功能。PlugHub 主框架负责模块发现、安装状态、Ribbon 组合和 Revit 入口适配，本仓库只保存可被 PlugHub 加载的功能模块。
 
 仓库中的 `packages.json` 是插件包清单，`dist/*.dll` 是 PlugHub 运行时加载的程序集。GitHub Actions 会在 `main` 分支构建插件 DLL，并发布 Release ZIP，便于本地安装。
 
@@ -19,6 +19,8 @@ PlugHub Packages 是 [PlugHub](https://github.com/GaoMengGu/PlugHub) 的外部�
 | `PlugHub.HubeiReportParameters` | 湖北报规参数 | 按用户选择的 CSV 模板创建 Revit 共享参数、写入模板数据并生成项目 HIFC 属性集映射文件。 |
 | `PlugHub.MepTypeFilterVisibility` | 机电过滤 | 框选风管、管道或桥架后，按系统类型或设备类型创建并切换当前视图过滤器。 |
 | `PlugHub.ProjectAutoSave` | 自动保存 | 按自定义分钟间隔自动保存当前 Revit 项目文件。 |
+
+本次迁移构建须配合已实现 `autoStart` / `startupType` 且已删除旧状态契约的框架使用。`frameworkVersionRange` 仅为元数据，不会阻止不匹配版本加载；匹配构建与 Windows/Revit 2020 联调通过前不发布。
 
 ## 安装方式
 
@@ -62,7 +64,7 @@ packages/dropins/PlugHub_Packages/
     reference-plane-visibility.png
 ```
 
-6. 重启 Revit，或在 PlugHub 中重新加载插件来源。
+6. 重启 Revit。自动保存包随框架启动并读取已有设置；首次默认关闭，启用后无需每次打开设置窗口。更新或卸载自启包后也需要重启。
 
 ### 方式二：配置仓库来源
 

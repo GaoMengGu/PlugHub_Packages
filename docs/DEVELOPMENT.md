@@ -4,7 +4,7 @@
 
 新任务分支按全局 AGENTS.md 规定使用 `type/short-description`；具体前缀和选择规则以全局约定为准。
 
-本目录是 PlugHub 外部插件包开发项目。PlugHub 主框架只负责模块契约、发现、启用/禁用、排序、组合、诊断和 Revit 2020 入口适配，不直接包含业务功能。
+本目录是 PlugHub 外部插件包开发项目。PlugHub 主框架只负责模块契约、发现、安装状态、排序、组合、诊断和 Revit 2020 入口适配，不直接包含业务功能。
 
 ## 目录结构
 
@@ -44,6 +44,8 @@ PlugHub_Packages/
 - 根 `indexVersion` 表示仓库索引和 Release 快照版本；`modules[].version` 表示单个模块在 PlugHub 框架中展示和比较的版本。
 
 ## 构建
+
+本仓库与框架仓库须以 `PlugHub_Packages/`、`PlugHub/` 并列放置；9 个项目和 CI 均从相邻 `PlugHub` 引用 Contracts，不再引用旧 `revittool` 目录。开发版 Contracts 的版本号可能同为 0.0.0，交付时需记录实际项目路径、框架提交和 DLL SHA256。
 
 ```powershell
 .\build.ps1 -RevitApiDir "D:\Program Files\Autodesk\Revit 2020"
@@ -124,7 +126,7 @@ packages/dropins/
 ## 新增插件包步骤
 
 1. 新建 .NET Framework 4.8 类库项目。
-2. 引用 PlugHub 主框架的 `PlugHub.Contracts.csproj`。
+2. 引用相邻 `PlugHub/src/PlugHub.Contracts/PlugHub.Contracts.csproj`，使用与目标框架匹配的 Contracts。
 3. 创建一个模块描述类，实现 `IPlugHubModule`。
 4. 创建一个命令类，实现 Revit 的 `IExternalCommand`。
 5. 在 `packages.json` 中新增模块记录和功能记录，并为模块设置 `version` 和 `author`。
@@ -144,9 +146,26 @@ packages/dropins/
 - `feature.displayName`、`feature.description`、`feature.iconPath` 和 `feature.commandType` 是功能入口的主要字段。
 - `feature.commandType` 必须是完整类型名，并实现 `Autodesk.Revit.UI.IExternalCommand`。
 - `feature.commandAssembly` 不再写入；feature 默认继承所属 module 的 `assembly`。
-- `enabled`、`visible`、`order`、`defaultState`、`buttonSize`、`feature.group`、`feature.category` 和 `feature.tags` 不写入仓库清单，默认状态和布局由 PlugHub 框架及用户本地配置负责。
+- 模块 `enabled` / `visible` 和功能 `defaultState` 已从框架状态契约删除，不写入清单或描述类；安装状态决定功能资格。`order`、`buttonSize`、`feature.group`、`feature.category` 和 `feature.tags` 不写入仓库清单，布局由框架及用户本地配置负责。
 - `iconPath` 为空时使用 PlugHub 默认图标；相对路径按插件包清单所在目录解析。仓库内真实图标必须遵循 [icons.md](icons.md)，默认使用文生图生成候选，并以后处理产出的 32×32 透明底 PNG 入库，保留 4px 安全留白以避免 Revit Ribbon 裁切。
+
+## 随框架启动
+
+仅 `PlugHub.ProjectAutoSave` 声明 `autoStart: true` 和 `startupType: PlugHub.ProjectAutoSave.ProjectAutoSaveApplication`，入口在同一 module `assembly` 中实现公开、无参的 Revit `IExternalApplication`。其余 8 包省略这两个字段，继续按需执行。不要把 `type`、`IPlugHubModule.Initialize` 或按钮 `commandType` 当作启动入口，也不要额外注册独立 `.addin`。
+
+自动保存入口在框架 `OnStartup` 返回前同步订阅 `UIControlledApplication.Idling`，不访问活动文档。事件发生后从 sender 获取 `UIApplication`，沿用现有 XML 设置、间隔和文档安全检查；首次默认关闭，已有启用设置在下次启动后继续生效。关闭保存开关仅跳过保存，保留事件订阅以便再次启用；框架 `OnShutdown` 注销事件并清理会话计时。刷新不重新初始化，更新、安装或卸载自启包须重启 Revit。
+
+本次只移除旧状态成员及修正启动链路；保留模块描述、空 `Initialize/Shutdown`、功能 ID、commandKey 和排序等仍有用途的元数据。`dependsOn` 不提供启动依赖调度；`frameworkVersionRange` 不会执行兼容性拦截，需协调匹配框架与包构建。不要修改 `moduleSources.enabled`、来源权限或窗口自身 Visibility。
 
 ## 验证边界
 
 本目录可以通过 `dotnet build` 验证 C# 编译。真实 Revit 命令行为必须在 Windows + Revit 2020 中使用测试模型副本或族文件副本验证。
+
+自动保存生命周期与 DLL 元数据回归：
+
+```powershell
+dotnet run --project tests/PlugHub.ProjectAutoSave.LifecycleValidation
+.\tests\Validate-Package.ps1
+```
+
+回归用 Revit 测试替身验证注册、禁用/重新启用、文档保护、保存异常与关闭；实际 XML 读取/写入和 Revit UI 仍需在实机检查。Revit 2020 实机应覆盖无文档启动、已有启用设置、只注册一次、刷新后不重复注册、关闭后注销，以及包更新/卸载重启切换。退出 Revit 后回退时须同时恢复匹配框架、全部包 DLL/依赖和清单副本，不能只回滚 JSON。

@@ -368,6 +368,19 @@ else {
             Reject-JsonProperty $module $property "Module $($module.id)"
         }
 
+        if ($module.id -eq "plughub.modules.project-auto-save") {
+            if ($module.autoStart -isnot [bool] -or $module.autoStart -ne $true) {
+                Add-Failure "Project auto-save module must declare autoStart as JSON true"
+            }
+            if ($module.startupType -ne "PlugHub.ProjectAutoSave.ProjectAutoSaveApplication") {
+                Add-Failure "Project auto-save module must declare its IExternalApplication startupType"
+            }
+        }
+        else {
+            Reject-JsonProperty $module "autoStart" "Non-startup module $($module.id)"
+            Reject-JsonProperty $module "startupType" "Non-startup module $($module.id)"
+        }
+
         foreach ($feature in @($module.features)) {
             foreach ($property in @("name", "commandKey", "version", "category", "group", "tags", "order", "defaultState", "buttonSize", "commandAssembly")) {
                 Reject-JsonProperty $feature $property "Feature $($feature.id)"
@@ -540,10 +553,6 @@ else {
             Add-Failure "Project auto-save module assembly must be dist/PlugHub.ProjectAutoSave.dll"
         }
 
-        if (@($projectAutoSaveModule.tags) -contains "startup") {
-            Add-Failure "Project auto-save module must not declare startup tag without framework startup support"
-        }
-
         $feature = $projectAutoSaveModule.features | Where-Object { $_.id -eq "plughub.modules.project-auto-save.settings" } | Select-Object -First 1
         if ($null -eq $feature) {
             Add-Failure "Missing project auto-save settings feature in packages.json"
@@ -609,6 +618,7 @@ Require-Text "PlugHub_Packages.slnx" "src/PlugHub.FamilyFileSaver/PlugHub.Family
 
 Require-File "src\PlugHub.ProjectAutoSave\PlugHub.ProjectAutoSave.csproj"
 Require-File "src\PlugHub.ProjectAutoSave\ProjectAutoSaveModule.cs"
+Require-File "src\PlugHub.ProjectAutoSave\ProjectAutoSaveApplication.cs"
 Require-File "src\PlugHub.ProjectAutoSave\AutoSaveSettings.cs"
 Require-File "src\PlugHub.ProjectAutoSave\AutoSaveSettingsWindow.xaml"
 Require-File "src\PlugHub.ProjectAutoSave\AutoSaveSettingsWindow.xaml.cs"
@@ -617,7 +627,7 @@ Require-File "src\PlugHub.ProjectAutoSave\ShowAutoSaveSettingsCommand.cs"
 Require-Text "src\PlugHub.ProjectAutoSave\AutoSaveSettings.cs" "DefaultIntervalMinutes = 10" "Project auto-save default interval"
 Require-Text "src\PlugHub.ProjectAutoSave\AutoSaveSettings.cs" "ShowNotification" "Project auto-save notification toggle"
 Require-Text "src\PlugHub.ProjectAutoSave\AutoSaveSettingsWindow.xaml" "自动保存设置" "Project auto-save settings title"
-Require-Text "src\PlugHub.ProjectAutoSave\AutoSaveSettingsWindow.xaml" "本次 Revit 会话" "Project auto-save session-limited setting copy"
+Require-Text "src\PlugHub.ProjectAutoSave\AutoSaveSettingsWindow.xaml" "重启 Revit 后沿用设置" "Project auto-save persistent setting copy"
 Require-Text "src\PlugHub.ProjectAutoSave\AutoSaveSettingsWindow.xaml" 'SizeToContent="Height"' "Project auto-save settings window height sizing"
 Require-Text "src\PlugHub.ProjectAutoSave\AutoSaveSettingsWindow.xaml" "自定义保存" "Project auto-save custom switch"
 Require-Text "src\PlugHub.ProjectAutoSave\AutoSaveSettingsWindow.xaml" "分钟间隔" "Project auto-save interval input"
@@ -627,10 +637,10 @@ Require-Text "src\PlugHub.ProjectAutoSave\AutoSaveService.cs" "document.IsFamily
 Require-Text "src\PlugHub.ProjectAutoSave\ShowAutoSaveSettingsCommand.cs" "AutoSaveSettingsWindow" "Project auto-save settings window command"
 Reject-Text "src\PlugHub.ProjectAutoSave\ShowAutoSaveSettingsCommand.cs" "OnStartup" "Project auto-save framework startup hook"
 Reject-Text "src\PlugHub.ProjectAutoSave\ShowAutoSaveSettingsCommand.cs" "OnShutdown" "Project auto-save framework shutdown hook"
-Require-Text "src\PlugHub.ProjectAutoSave\ShowAutoSaveSettingsCommand.cs" "ApplySettings" "Project auto-save settings service application"
+Reject-Text "src\PlugHub.ProjectAutoSave\ShowAutoSaveSettingsCommand.cs" "AutoSaveService.Start" "Command-owned auto-save subscription"
+Require-Text "src\PlugHub.ProjectAutoSave\ProjectAutoSaveApplication.cs" "IExternalApplication" "Project auto-save startup contract"
 Reject-Text "src\PlugHub.ProjectAutoSave\ShowAutoSaveSettingsCommand.cs" 'TaskDialog.Show("自动保存设置"' "Project auto-save save-settings confirmation popup"
 Require-Text "src\PlugHub.ProjectAutoSave\ProjectAutoSaveModule.cs" "ShowAutoSaveSettingsCommand" "Project auto-save settings command registration"
-Reject-Text "src\PlugHub.ProjectAutoSave\ProjectAutoSaveModule.cs" "startup" "Project auto-save module startup tag"
 Require-MonochromeIconColor "icons\project-auto-save.png" 0x1A 0x1A 0x1A
 Require-Text "build.ps1" "src\PlugHub.ProjectAutoSave\PlugHub.ProjectAutoSave.csproj" "Project auto-save project build registration"
 Require-Text "PlugHub_Packages.slnx" "src/PlugHub.ProjectAutoSave/PlugHub.ProjectAutoSave.csproj" "Project auto-save solution registration"
@@ -742,6 +752,20 @@ Reject-Text "src\PlugHub.HubeiReportParameters\PlugHub.HubeiReportParameters.csp
 Reject-Text "src\PlugHub.HubeiReportParameters\PlugHub.HubeiReportParameters.csproj" "Resources\mini.txt" "Hubei report legacy embedded mini resource"
 Require-Text "build.ps1" "src\PlugHub.HubeiReportParameters\PlugHub.HubeiReportParameters.csproj" "Hubei report parameters project build registration"
 Require-Text "PlugHub_Packages.slnx" "src/PlugHub.HubeiReportParameters/PlugHub.HubeiReportParameters.csproj" "Hubei report parameters solution registration"
+foreach ($moduleFile in Get-ChildItem -LiteralPath (Join-Path $Root "src") -Recurse -Filter "*Module.cs") {
+    $relativePath = [IO.Path]::GetRelativePath($Root, $moduleFile.FullName)
+    foreach ($legacyToken in @("ModuleState", "FeatureState", "DefaultState =", "State =")) {
+        Reject-Text $relativePath $legacyToken "Removed descriptor state contract"
+    }
+}
+
+foreach ($projectFile in Get-ChildItem -LiteralPath (Join-Path $Root "src") -Recurse -Filter "*.csproj") {
+    $relativePath = [IO.Path]::GetRelativePath($Root, $projectFile.FullName)
+    Require-Text $relativePath '..\..\..\PlugHub\src\PlugHub.Contracts\PlugHub.Contracts.csproj' "Current framework Contracts reference"
+    Reject-Text $relativePath 'revittool' "Obsolete framework checkout path"
+}
+Require-Text ".github\workflows\build-package.yml" 'path: PlugHub' "Framework checkout matches project references"
+Reject-Text ".github\workflows\build-package.yml" 'path: revittool' "Obsolete framework checkout path"
 Reject-Text "packages.json" "builtin:" "Built-in icon reference"
 Reject-Text "packages.json" "Tee/Tap" "Duct preferred junction old Tee/Tap wording"
 Require-Text ".github\workflows\build-package.yml" '$indexVersionPattern = [regex]::new(' "Root indexVersion replacement regex instance"

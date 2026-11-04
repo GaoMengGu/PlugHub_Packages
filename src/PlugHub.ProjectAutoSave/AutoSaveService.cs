@@ -9,52 +9,41 @@ namespace PlugHub.ProjectAutoSave
     public static class AutoSaveService
     {
         private static readonly Dictionary<string, DateTime> LastSaveTimes = new Dictionary<string, DateTime>();
-        private static UIApplication? _uiApplication;
+        private static UIControlledApplication? _application;
         private static bool _isHooked;
         private static bool _isSaving;
 
-        public static void Start(UIApplication uiApplication)
+        public static void Start(UIControlledApplication application)
         {
-            if (uiApplication == null)
+            if (application == null)
             {
-                return;
+                throw new ArgumentNullException(nameof(application));
             }
 
-            if (_isHooked && !ReferenceEquals(_uiApplication, uiApplication))
+            if (_isHooked && !ReferenceEquals(_application, application))
             {
                 Stop();
             }
 
-            _uiApplication = uiApplication;
+            _application = application;
             if (!_isHooked)
             {
-                uiApplication.Idling += OnIdling;
+                application.Idling += OnIdling;
                 _isHooked = true;
             }
         }
 
         public static void Stop()
         {
-            if (_uiApplication != null && _isHooked)
+            if (_application != null && _isHooked)
             {
-                _uiApplication.Idling -= OnIdling;
+                _application.Idling -= OnIdling;
             }
 
-            _uiApplication = null;
+            _application = null;
             _isHooked = false;
             _isSaving = false;
-        }
-
-        public static void ApplySettings(UIApplication uiApplication, AutoSaveSettings settings)
-        {
-            if (settings.IsEnabled)
-            {
-                Start(uiApplication);
-            }
-            else
-            {
-                Stop();
-            }
+            LastSaveTimes.Clear();
         }
 
         private static void OnIdling(object? sender, IdlingEventArgs args)
@@ -67,11 +56,10 @@ namespace PlugHub.ProjectAutoSave
             AutoSaveSettings settings = AutoSaveSettings.Load();
             if (!settings.IsEnabled)
             {
-                Stop();
                 return;
             }
 
-            UIDocument? uiDocument = _uiApplication?.ActiveUIDocument;
+            UIDocument? uiDocument = (sender as UIApplication)?.ActiveUIDocument;
             Document? document = uiDocument?.Document;
             if (document == null || !ShouldSaveDocument(document, settings))
             {

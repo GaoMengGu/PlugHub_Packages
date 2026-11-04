@@ -13,7 +13,6 @@ namespace PlugHub.DuctPreferredJunction
                 Id = "plughub.modules.duct-preferred-junction",
                 Name = "机电工具",
                 Description = "风管连接偏好工具。",
-                State = ModuleState.Enabled,
                 Order = 300,
                 Tags = new[] { "mep", "duct", "revit-api" },
                 Features = new List<FeatureDescriptor>
@@ -28,7 +27,6 @@ namespace PlugHub.DuctPreferredJunction
                         Group = "机电工具",
                         Tags = new[] { "mep", "duct", "frequent" },
                         Order = 310,
-                        DefaultState = FeatureState.Visible,
                         ButtonSize = "large",
                         CommandKey = "plughub.modules.duct-preferred-junction.switch",
                         CommandAssembly = "dist/PlugHub.DuctPreferredJunction.dll",
