@@ -20,3 +20,12 @@ PlugHub-Packages-*.zip
 
 # Local reference templates and mappings selected by package users.
 /docs/
+
+# Local agent instructions, collaboration state and temporary work.
+/AGENTS.md
+/.chorus/
+/.codex/
+/.agents/
+/.tmp/
+/output/
+/tmp/
