@@ -1,5 +1,9 @@
 # PlugHub 外部插件包开发说明
 
+## 分支命名
+
+新任务分支按任务类型使用 `type/short-description`，完整前缀、选择规则和验证方式见 [BRANCH_NAMING.md](BRANCH_NAMING.md)。
+
 本目录是 PlugHub 外部插件包开发项目。PlugHub 主框架只负责模块契约、发现、启用/禁用、排序、组合、诊断和 Revit 2020 入口适配，不直接包含业务功能。
 
 ## 目录结构
