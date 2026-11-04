@@ -18,7 +18,7 @@ dist/*.pdb
 release/
 PlugHub-Packages-*.zip
 
-# Local reference templates and mappings selected by package users.
+# Local docs, reference templates and mappings selected by package users.
 /docs/
 
 # Local agent instructions, collaboration state and temporary work.
