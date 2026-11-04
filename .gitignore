@@ -18,9 +18,6 @@ dist/*.pdb
 release/
 PlugHub-Packages-*.zip
 
-# Local docs, reference templates and mappings selected by package users.
-/docs/
-
 # Local agent instructions, collaboration state and temporary work.
 /AGENTS.md
 /.chorus/
