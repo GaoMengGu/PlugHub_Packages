@@ -17,3 +17,13 @@ dist/*.pdb
 # Local release packaging output.
 release/
 PlugHub-Packages-*.zip
+
+# Local agent instructions, collaboration state and temporary work.
+/AGENTS.md
+/.chorus/
+/.codex/
+/.agents/
+/.tmp/
+/output/
+/tmp/
+/docs/
