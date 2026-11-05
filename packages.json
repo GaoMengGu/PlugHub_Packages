@@ -7,6 +7,33 @@
   "frameworkVersionRange": ">=1.3.0",
   "modules": [
     {
+      "id": "plughub.modules.clear-height-analysis",
+      "version": "V2.0.0",
+      "author": "GAOMENGGU",
+      "displayName": "土建工具",
+      "description": "基于真实楼层与宿主/链接模型分析净高，持久保存分析批次并按需生成轻量轮廓、面积色块、PNG 和 CSV。",
+      "assembly": "dist/PlugHub.ClearHeightAnalysis.dll",
+      "category": "civil",
+      "tags": [
+        "civil",
+        "architecture",
+        "structural",
+        "mep",
+        "clear-height",
+        "heatmap",
+        "revit-api"
+      ],
+      "features": [
+        {
+          "id": "plughub.modules.clear-height-analysis.analyze",
+          "displayName": "净高分析",
+          "description": "分析真实边界内的结构与机电净高，默认生成轻量问题轮廓，可选面积色块、PNG 总览和 CSV。",
+          "iconPath": "icons/clear-height-analysis.png",
+          "commandType": "PlugHub.ClearHeightAnalysis.ClearHeightAnalysisCommand"
+        }
+      ]
+    },
+    {
       "id": "plughub.modules.grid-visibility",
       "version": "V1.0.5",
       "author": "GAOMENGGU",

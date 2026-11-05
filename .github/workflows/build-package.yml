@@ -54,6 +54,13 @@ jobs:
           dotnet run --project tests/PlugHub.ProjectAutoSave.LifecycleValidation
           if ($LASTEXITCODE -ne 0) { throw "Auto-save lifecycle or package payload validation failed." }
 
+      - name: Test clear height analysis core
+        shell: pwsh
+        working-directory: PlugHub_Packages
+        run: |
+          dotnet test tests/PlugHub.ClearHeightAnalysis.Tests -c Release --verbosity minimal
+          if ($LASTEXITCODE -ne 0) { throw "Clear height analysis tests failed." }
+
       - name: Resolve package version
         id: version
         if: github.event_name != 'pull_request' && github.actor != 'github-actions[bot]' && (github.ref_type == 'tag' || github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch')

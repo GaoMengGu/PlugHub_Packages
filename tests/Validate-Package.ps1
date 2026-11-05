@@ -56,6 +56,15 @@ function Reject-Text {
     }
 }
 
+function Require-ClearHeightV3Geometry {
+    Require-Text "src/PlugHub.ClearHeightAnalysis/Revit/RevitObstacleSnapshotFactory.cs" "LocationCurve" "Directional linear obstacle extraction"
+    Require-Text "src/PlugHub.ClearHeightAnalysis/Revit/RevitObstacleSnapshotFactory.cs" "GetBottomFaces" "All host bottom-face extraction"
+    Require-Text "src/PlugHub.ClearHeightAnalysis/Revit/RevitObstacleSnapshotFactory.cs" "PlanarRegionObstacle" "Planar multi-region obstacle extraction"
+    Require-Text "src/PlugHub.ClearHeightAnalysis/Revit/RevitObstacleSnapshotFactory.cs" "BoundingBoxObstacle" "Explicit bounding-box fallback"
+    Require-Text "src/PlugHub.ClearHeightAnalysis/Revit/RevitElementGeometry.cs" "Solid" "Solid geometry obstacle projection before bounding-box fallback"
+    Require-Text "src/PlugHub.ClearHeightAnalysis/Revit/RevitElementGeometry.cs" "GeometryInstance" "Nested family geometry traversal"
+}
+
 function Test-JsonProperty {
     param(
         [object]$Value,
@@ -567,6 +576,29 @@ else {
             Require-FeatureIcon $feature "icons/project-auto-save.png"
         }
     }
+    $clearHeightModule = $manifest.modules | Where-Object { $_.id -eq "plughub.modules.clear-height-analysis" } | Select-Object -First 1
+    if ($null -eq $clearHeightModule) {
+        Add-Failure "Missing clear height analysis module in packages.json"
+    }
+    else {
+        if ($clearHeightModule.assembly -ne "dist/PlugHub.ClearHeightAnalysis.dll") {
+            Add-Failure "Clear height analysis module assembly must be dist/PlugHub.ClearHeightAnalysis.dll"
+        }
+
+        $feature = $clearHeightModule.features | Where-Object { $_.id -eq "plughub.modules.clear-height-analysis.analyze" } | Select-Object -First 1
+        if ($null -eq $feature) {
+            Add-Failure "Missing clear height analysis feature in packages.json"
+        }
+        else {
+            if ($feature.displayName -ne (ConvertFrom-Json '"\u51c0\u9ad8\u5206\u6790"')) {
+                Add-Failure "Clear height analysis feature displayName must match the manifest display name"
+            }
+            if ($feature.commandType -ne "PlugHub.ClearHeightAnalysis.ClearHeightAnalysisCommand") {
+                Add-Failure "Clear height analysis commandType must be PlugHub.ClearHeightAnalysis.ClearHeightAnalysisCommand"
+            }
+            Require-FeatureIcon $feature "icons/clear-height-analysis.png"
+        }
+    }
 }
 
 Require-File "src\PlugHub.GridVisibility\PlugHub.GridVisibility.csproj"
@@ -752,6 +784,93 @@ Reject-Text "src\PlugHub.HubeiReportParameters\PlugHub.HubeiReportParameters.csp
 Reject-Text "src\PlugHub.HubeiReportParameters\PlugHub.HubeiReportParameters.csproj" "Resources\mini.txt" "Hubei report legacy embedded mini resource"
 Require-Text "build.ps1" "src\PlugHub.HubeiReportParameters\PlugHub.HubeiReportParameters.csproj" "Hubei report parameters project build registration"
 Require-Text "PlugHub_Packages.slnx" "src/PlugHub.HubeiReportParameters/PlugHub.HubeiReportParameters.csproj" "Hubei report parameters solution registration"
+Require-File "src\PlugHub.ClearHeightAnalysis\PlugHub.ClearHeightAnalysis.csproj"
+Require-File "src\PlugHub.ClearHeightAnalysis\ClearHeightAnalysisModule.cs"
+Require-File "src\PlugHub.ClearHeightAnalysis\ClearHeightAnalysisCommand.cs"
+Require-Text "src\PlugHub.ClearHeightAnalysis\ClearHeightAnalysisModule.cs" "土建工具" "Clear height module business category"
+Require-Text "src\PlugHub.ClearHeightAnalysis\ClearHeightAnalysisCommand.cs" "AnalysisWorkflowController" "Clear height V2 workflow entry"
+Reject-Text "src\PlugHub.ClearHeightAnalysis\ClearHeightAnalysisCommand.cs" "BuildingOutlineProvider" "Production command must not use legacy outline provider"
+Reject-Text "src\PlugHub.ClearHeightAnalysis\ClearHeightAnalysisCommand.cs" "ClearHeightCalculator" "Production command must not use legacy calculator"
+Reject-Text "src\PlugHub.ClearHeightAnalysis\ClearHeightAnalysisCommand.cs" "HeatmapRenderer" "Production command must not use legacy filled-region renderer"
+Reject-Text "src\PlugHub.ClearHeightAnalysis\ClearHeightAnalysisCommand.cs" "HeatmapResultLimiter" "Production command must not silently truncate output"
+Require-MonochromeIconColor "icons\clear-height-analysis.png" 0x1A 0x1A 0x1A
+Require-Text "build.ps1" "src\PlugHub.ClearHeightAnalysis\PlugHub.ClearHeightAnalysis.csproj" "Clear height project build registration"
+Require-Text "PlugHub_Packages.slnx" "src/PlugHub.ClearHeightAnalysis/PlugHub.ClearHeightAnalysis.csproj" "Clear height solution registration"
+Require-File "src\PlugHub.ClearHeightAnalysis\UI\V2AnalysisWindow.xaml"
+Require-File "src\PlugHub.ClearHeightAnalysis\UI\V2AnalysisWindow.xaml.cs"
+Require-File "src\PlugHub.ClearHeightAnalysis\UI\V2ResultWindow.xaml"
+Require-File "src\PlugHub.ClearHeightAnalysis\UI\V2ResultWindow.xaml.cs"
+Require-Text "src\PlugHub.ClearHeightAnalysis\UI\V2AnalysisWindow.xaml" "选择真实楼层" "V2 real level selection guidance"
+Require-Text "src\PlugHub.ClearHeightAnalysis\UI\V2AnalysisWindow.xaml.cs" "OpenHistoryRequested" "V2 direct history access"
+Require-Text "src\PlugHub.ClearHeightAnalysis\UI\V2ResultWindow.xaml" "面积色块（可选）" "V2 optional area output"
+Require-Text "src\PlugHub.ClearHeightAnalysis\UI\V2ResultWindow.xaml" "近似" "V2 approximation warning"
+Require-Text "src\PlugHub.ClearHeightAnalysis\UI\V2ResultWindow.xaml.cs" "ResultFilter.Apply" "V2 result filters"
+Require-File "src\PlugHub.ClearHeightAnalysis\Services\UnitConversion.cs"
+Require-File "src\PlugHub.ClearHeightAnalysis\Services\ResultTagService.cs"
+Require-Text "src\PlugHub.ClearHeightAnalysis\Services\ResultTagService.cs" "Schema" "Clear height result tagging schema"
+Require-File "src\PlugHub.ClearHeightAnalysis\Revit\AnalysisWorkflowController.cs"
+Require-Text "src\PlugHub.ClearHeightAnalysis\Revit\AnalysisWorkflowController.cs" "V2AnalysisWindow" "V2 analysis settings workflow"
+Require-Text "src\PlugHub.ClearHeightAnalysis\Revit\AnalysisWorkflowController.cs" "RevitAnalysisRunner" "V2 Revit analysis runner"
+Require-Text "src\PlugHub.ClearHeightAnalysis\Revit\AnalysisWorkflowController.cs" "repository.Save" "V2 batch save before results"
+Require-Text "src\PlugHub.ClearHeightAnalysis\Revit\AnalysisWorkflowController.cs" "V2ResultWindow" "V2 result manager workflow"
+Require-Text "src\PlugHub.ClearHeightAnalysis\Revit\AnalysisWorkflowController.cs" "AnalysisContextRecord" "V2 source view and transform context"
+Require-File "src\PlugHub.ClearHeightAnalysis\Revit\RevitAnalysisRunner.cs"
+Require-File "src\PlugHub.ClearHeightAnalysis\Revit\RevitBoundaryProvider.cs"
+Require-File "src\PlugHub.ClearHeightAnalysis\Revit\RevitObstacleSnapshotCollector.cs"
+Require-Text "src\PlugHub.ClearHeightAnalysis\Revit\RevitBoundaryProvider.cs" "HostObjectUtils.GetTopFaces" "V2 true floor boundary extraction"
+Require-Text "src\PlugHub.ClearHeightAnalysis\Revit\RevitBoundaryProvider.cs" "GetEdgesAsCurveLoops" "V2 floor boundary curve loops"
+Require-Text "src\PlugHub.ClearHeightAnalysis\Revit\RevitAnalysisContextBuilder.cs" "GetTotalTransform" "V2 linked instance total transform"
+Require-Text "src\PlugHub.ClearHeightAnalysis\Revit\RevitObstacleSnapshotFactory.cs" '"link:" + source.LinkInstance!.UniqueId' "V2 link-instance-aware obstacle key"
+Require-Text "src\PlugHub.ClearHeightAnalysis\Revit\RevitObstacleSnapshotCollector.cs" "BoundingBoxIntersectsFilter" "V2 Revit-side candidate coarse filter"
+Require-Text "src\PlugHub.ClearHeightAnalysis\Revit\RevitAnalysisRunner.cs" "ClearHeightBatchAnalyzer" "V2 indexed analysis engine"
+Require-Text "src\PlugHub.ClearHeightAnalysis\Revit\AnalysisWorkflowController.cs" "ConfirmScale(preparation.Scale)" "Scale confirmation before obstacle snapshot capture"
+Reject-Text "src\PlugHub.ClearHeightAnalysis\Revit\RevitAnalysisRunner.cs" "HeatmapRenderer" "V2 runner must not create filled regions"
+Require-File "src\PlugHub.ClearHeightAnalysis\Revit\AnalysisBatchRepository.cs"
+Require-File "src\PlugHub.ClearHeightAnalysis\Revit\OutputTagService.cs"
+Require-File "src\PlugHub.ClearHeightAnalysis\Revit\DerivedOutputCleanupService.cs"
+Require-Text "src\PlugHub.ClearHeightAnalysis\Revit\AnalysisBatchRepository.cs" "DataStorage" "V2 batch DataStorage persistence"
+Require-Text "src\PlugHub.ClearHeightAnalysis\Revit\AnalysisBatchRepository.cs" "AnalysisBatchSerializer.Deserialize" "V2 batch integrity validation"
+Require-Text "src\PlugHub.ClearHeightAnalysis\Revit\AnalysisBatchRepository.cs" "ChunkSequence" "V2 batch chunk sequence storage"
+Require-File "src\PlugHub.ClearHeightAnalysis\Revit\V2AnalysisBatchReader.cs"
+Require-File "src\PlugHub.ClearHeightAnalysis\Revit\V3AnalysisBatchReader.cs"
+Require-Text "src\PlugHub.ClearHeightAnalysis\Revit\AnalysisBatchRepository.cs" "foreach(IAnalysisBatchReader reader in Readers)" "V2 and V3 manifest-only listing"
+Require-Text "src\PlugHub.ClearHeightAnalysis\UI\V2ResultWindow.xaml.cs" "_selectedManifest" "Manifest selection independent from loaded batch body"
+Require-Text "src\PlugHub.ClearHeightAnalysis\UI\V2ResultWindow.xaml.cs" "CanGenerateModelOutputs" "Legacy output capability gating"
+Require-Text "src\PlugHub.ClearHeightAnalysis\Revit\OutputTagService.cs" "BatchId" "V2 output batch ownership tag"
+Require-Text "src\PlugHub.ClearHeightAnalysis\Revit\OutputTagService.cs" "OutputId" "V2 output instance ownership tag"
+Require-Text "src\PlugHub.ClearHeightAnalysis\Revit\DerivedOutputCleanupService.cs" "Matches" "V2 scoped derived-output cleanup"
+Require-File "src\PlugHub.ClearHeightAnalysis\Revit\DerivedOutputRegistryRepository.cs"
+Require-File "src\PlugHub.ClearHeightAnalysis\Revit\DerivedOutputLifecycleService.cs"
+Require-Text "src\PlugHub.ClearHeightAnalysis\Revit\DerivedOutputLifecycleService.cs" "TransactionGroup" "Atomic derived output transaction group"
+Require-Text "src\PlugHub.ClearHeightAnalysis\UI\V2ResultWindow.xaml.cs" "_outputLifecycle.ReplaceModel" "Model output lifecycle usage"
+Require-Text "src\PlugHub.ClearHeightAnalysis\UI\V2ResultWindow.xaml.cs" "_outputLifecycle.ReplaceFile" "File output lifecycle usage"
+Reject-Text "src\PlugHub.ClearHeightAnalysis\UI\V2ResultWindow.xaml.cs" "_repository.Save(Document,_batch)" "Output changes must not rewrite immutable batch body"
+Require-File "src\PlugHub.ClearHeightAnalysis\Revit\LightweightDrawingExporter.cs"
+Require-Text "src\PlugHub.ClearHeightAnalysis\Revit\LightweightDrawingExporter.cs" "NewDetailCurve" "V2 lightweight detail curves"
+Require-Text "src\PlugHub.ClearHeightAnalysis\Revit\LightweightDrawingExporter.cs" "TextNote.Create" "V2 numbered region notes"
+Require-Text "src\PlugHub.ClearHeightAnalysis\Revit\LightweightDrawingExporter.cs" "OutputTagService.Tag" "V2 lightweight output ownership tags"
+Reject-Text "src\PlugHub.ClearHeightAnalysis\Revit\LightweightDrawingExporter.cs" "FilledRegion" "V2 lightweight output must not use fills"
+Require-File "src\PlugHub.ClearHeightAnalysis\Revit\AreaColorPlanExporter.cs"
+Require-Text "src\PlugHub.ClearHeightAnalysis\Revit\AreaColorPlanExporter.cs" "PH_净高分析" "V2 area scheme prerequisite"
+Require-Text "src\PlugHub.ClearHeightAnalysis\Revit\AreaColorPlanExporter.cs" "PH_净高分析_色块" "V2 area color view template prerequisite"
+Require-Text "src\PlugHub.ClearHeightAnalysis\Revit\AreaColorPlanExporter.cs" "EstimatedBoundaryLineCount" "V2 area output preflight"
+Require-Text "src\PlugHub.ClearHeightAnalysis\Revit\AreaColorPlanExporter.cs" "LookupParameter" "Write available PlugHub area parameters without creating project parameters"
+Require-Text "src\PlugHub.ClearHeightAnalysis\Revit\AreaColorPlanExporter.cs" "OutputTagService.Tag(plane" "V2 area sketch plane ownership tag"
+Reject-Text "src\PlugHub.ClearHeightAnalysis\Revit\AreaColorPlanExporter.cs" "new AreaScheme" "V2 must not create area schemes"
+Require-File "src\PlugHub.ClearHeightAnalysis\Revit\RasterHeatmapExporter.cs"
+Require-File "src\PlugHub.ClearHeightAnalysis\Revit\CsvExporter.cs"
+Require-Text "src\PlugHub.ClearHeightAnalysis\Revit\RasterHeatmapExporter.cs" "ImageType.Create" "V2 single raster image type"
+Require-Text "src\PlugHub.ClearHeightAnalysis\Revit\RasterHeatmapExporter.cs" "ImageInstance.Create" "V2 single raster image instance"
+Require-File "src\PlugHub.ClearHeightAnalysis\Core\Services\ResultViewPolicy.cs"
+Require-File "src\PlugHub.ClearHeightAnalysis\Core\Services\FormalHeatmapRenderer.cs"
+Require-Text "src\PlugHub.ClearHeightAnalysis\Core\Services\FormalHeatmapRenderer.cs" "CLEAR HEIGHT ANALYSIS" "Formal PNG visible title"
+Require-Text "src\PlugHub.ClearHeightAnalysis\Revit\LightweightDrawingExporter.cs" "ResultViewPolicy.EnsureSupported" "Lightweight output plan view policy"
+Require-Text "src\PlugHub.ClearHeightAnalysis\Revit\RasterHeatmapExporter.cs" "ResultViewPolicy.EnsureSupported" "PNG output plan view policy"
+Require-Text "src\PlugHub.ClearHeightAnalysis\UI\V2ResultWindow.xaml.cs" "ShowElements" "Controlling element location"
+Require-Text "src\PlugHub.ClearHeightAnalysis\Revit\CsvExporter.cs" "CsvResultExporter.Export" "V2 complete CSV output"
+Require-Text "src\PlugHub.ClearHeightAnalysis\Revit\CsvExporter.cs" "public byte[] Build" "Transaction-neutral CSV content builder"
+Require-ClearHeightV3Geometry
+
 foreach ($moduleFile in Get-ChildItem -LiteralPath (Join-Path $Root "src") -Recurse -Filter "*Module.cs") {
     $relativePath = [IO.Path]::GetRelativePath($Root, $moduleFile.FullName)
     foreach ($legacyToken in @("ModuleState", "FeatureState", "DefaultState =", "State =")) {

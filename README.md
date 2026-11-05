@@ -18,6 +18,7 @@ PlugHub Packages 是 [PlugHub](https://github.com/GaoMengGu/PlugHub) 的外部�
 | `PlugHub.FamilyFileSaver` | 批量保存 | 筛选当前项目中的可保存族，并批量保存到指定文件夹。 |
 | `PlugHub.HubeiReportParameters` | 湖北报规参数 | 按用户选择的 CSV 模板创建 Revit 共享参数、写入模板数据并生成项目 HIFC 属性集映射文件。 |
 | `PlugHub.MepTypeFilterVisibility` | 机电过滤 | 框选风管、管道或桥架后，按系统类型或设备类型创建并切换当前视图过滤器。 |
+| `PlugHub.ClearHeightAnalysis` | 净高分析 | 基于宿主及链接模型分析楼层净高，保存分析批次并按需生成问题轮廓、面积色块、PNG 和 CSV。 |
 | `PlugHub.ProjectAutoSave` | 自动保存 | 按自定义分钟间隔自动保存当前 Revit 项目文件。 |
 
 本次迁移构建须配合已实现 `autoStart` / `startupType` 且已删除旧状态契约的框架使用。`frameworkVersionRange` 仅为元数据，不会阻止不匹配版本加载；匹配构建与 Windows/Revit 2020 联调通过前不发布。
@@ -43,6 +44,7 @@ PlugHub Packages 是 [PlugHub](https://github.com/GaoMengGu/PlugHub) 的外部�
 packages/dropins/PlugHub_Packages/
   packages.json
   dist/
+    PlugHub.ClearHeightAnalysis.dll
     PlugHub.DuctPreferredJunction.dll
     PlugHub.FamilyFileSaver.dll
     PlugHub.FamilyMaterialParameters.dll
@@ -53,6 +55,7 @@ packages/dropins/PlugHub_Packages/
     PlugHub.ProjectAutoSave.dll
     PlugHub.ReferencePlaneVisibility.dll
   icons/
+    clear-height-analysis.png
     duct-preferred-junction.png
     family-file-saver.png
     family-material-parameters.png

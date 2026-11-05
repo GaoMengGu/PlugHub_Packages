@@ -20,7 +20,7 @@ internal static class Program
     {
         Lifecycle();
         Payload();
-        Console.WriteLine("Auto-save lifecycle and all 9 package payloads passed.");
+        Console.WriteLine("Auto-save lifecycle and all 10 package payloads passed.");
     }
 
     private static void Require(bool condition, string message)
@@ -107,7 +107,7 @@ internal static class Program
         Require(root != null, "Package root not found.");
         using var manifest = JsonDocument.Parse(File.ReadAllText(Path.Combine(root!.FullName, "packages.json")));
         var modules = manifest.RootElement.GetProperty("modules").EnumerateArray().ToArray();
-        Require(modules.Length == 9, "All nine migrated payloads must be checked.");
+        Require(modules.Length == 10, "All ten package payloads must be checked.");
         foreach (var module in modules)
         {
             string relative = module.GetProperty("assembly").GetString()!;
