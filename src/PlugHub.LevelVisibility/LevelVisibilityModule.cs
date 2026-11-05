@@ -13,7 +13,6 @@ namespace PlugHub.LevelVisibility
                 Id = "plughub.modules.level-visibility",
                 Name = "视图工具",
                 Description = "当前视图标高显示控制工具。",
-                State = ModuleState.Enabled,
                 Order = 220,
                 Tags = new[] { "view", "level", "visibility", "revit-api" },
                 Features = new List<FeatureDescriptor>
@@ -28,7 +27,6 @@ namespace PlugHub.LevelVisibility
                         Group = "视图工具",
                         Tags = new[] { "view", "level", "visibility", "frequent" },
                         Order = 220,
-                        DefaultState = FeatureState.Visible,
                         ButtonSize = "large",
                         CommandKey = "plughub.modules.level-visibility.toggle",
                         CommandAssembly = "dist/PlugHub.LevelVisibility.dll",

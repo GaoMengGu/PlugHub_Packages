@@ -13,7 +13,6 @@ namespace PlugHub.FamilyFileSaver
                 Id = "plughub.modules.family-file-saver",
                 Name = "族工具",
                 Description = "读取当前项目所有族，筛选后批量保存到指定文件夹。",
-                State = ModuleState.Enabled,
                 Order = 500,
                 Tags = new[] { "family", "save", "export", "revit-api" },
                 Features = new List<FeatureDescriptor>
@@ -28,7 +27,6 @@ namespace PlugHub.FamilyFileSaver
                         Group = "族工具",
                         Tags = new[] { "family", "save", "export" },
                         Order = 510,
-                        DefaultState = FeatureState.Visible,
                         ButtonSize = "large",
                         CommandKey = "plughub.modules.family-file-saver.save",
                         CommandAssembly = "dist/PlugHub.FamilyFileSaver.dll",

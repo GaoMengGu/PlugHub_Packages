@@ -13,7 +13,6 @@ namespace PlugHub.MepTypeFilterVisibility
                 Id = "plughub.modules.mep-type-filter-visibility",
                 Name = "机电工具",
                 Description = "按选中风管、管道或桥架类型控制当前视图过滤器显示。",
-                State = ModuleState.Enabled,
                 Order = 330,
                 Tags = new[] { "mep", "duct", "pipe", "cable-tray", "filter", "visibility", "revit-api" },
                 Features = new List<FeatureDescriptor>
@@ -28,7 +27,6 @@ namespace PlugHub.MepTypeFilterVisibility
                         Group = "机电工具",
                         Tags = new[] { "mep", "duct", "pipe", "cable-tray", "filter", "visibility", "frequent" },
                         Order = 330,
-                        DefaultState = FeatureState.Visible,
                         ButtonSize = "large",
                         CommandKey = "plughub.modules.mep-type-filter-visibility.apply",
                         CommandAssembly = "dist/PlugHub.MepTypeFilterVisibility.dll",

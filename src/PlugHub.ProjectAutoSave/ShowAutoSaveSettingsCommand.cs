@@ -20,7 +20,6 @@ namespace PlugHub.ProjectAutoSave
             try
             {
                 AutoSaveSettings settings = AutoSaveSettings.Load();
-                AutoSaveService.ApplySettings(uiApplication, settings);
 
                 AutoSaveSettingsWindow window = new AutoSaveSettingsWindow(settings);
                 IntPtr revitHandle = uiApplication.MainWindowHandle;
@@ -35,7 +34,6 @@ namespace PlugHub.ProjectAutoSave
                 if (result == true)
                 {
                     window.Settings.Save();
-                    AutoSaveService.ApplySettings(uiApplication, window.Settings);
                 }
 
                 return Result.Succeeded;

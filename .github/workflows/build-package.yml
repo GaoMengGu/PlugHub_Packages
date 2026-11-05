@@ -35,7 +35,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: GaoMengGu/PlugHub
-          path: revittool
+          path: PlugHub
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -46,6 +46,13 @@ jobs:
         shell: pwsh
         working-directory: PlugHub_Packages
         run: .\build.ps1 -UseRevitApiNuGet
+
+      - name: Validate auto-save lifecycle and payloads
+        shell: pwsh
+        working-directory: PlugHub_Packages
+        run: |
+          dotnet run --project tests/PlugHub.ProjectAutoSave.LifecycleValidation
+          if ($LASTEXITCODE -ne 0) { throw "Auto-save lifecycle or package payload validation failed." }
 
       - name: Resolve package version
         id: version

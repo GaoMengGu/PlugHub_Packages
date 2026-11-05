@@ -87,7 +87,7 @@
         <Border Grid.Row="0" Background="White" CornerRadius="6" Padding="16" Margin="0,0,0,14">
             <StackPanel>
                 <TextBlock Text="自动保存设置" FontSize="18" FontWeight="SemiBold" Foreground="#2B579A"/>
-                <TextBlock Text="启用后将在本次 Revit 会话内，按指定分钟间隔保存当前已保存过的 Revit 项目文件。"
+                <TextBlock Text="启用后按指定分钟间隔保存当前已保存过的 Revit 项目文件，重启 Revit 后沿用设置。"
                            Foreground="#666666" Margin="0,6,0,0" TextWrapping="Wrap"/>
             </StackPanel>
         </Border>

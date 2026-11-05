@@ -13,7 +13,6 @@ namespace PlugHub.FamilyMaterialParameters
                 Id = "plughub.modules.family-material-parameters",
                 Name = "族工具",
                 Description = "族文件材质参数批处理工具。",
-                State = ModuleState.Enabled,
                 Order = 400,
                 Tags = new[] { "family", "material", "revit-api" },
                 Features = new List<FeatureDescriptor>
@@ -28,7 +27,6 @@ namespace PlugHub.FamilyMaterialParameters
                         Group = "族工具",
                         Tags = new[] { "family", "material", "batch" },
                         Order = 410,
-                        DefaultState = FeatureState.Visible,
                         ButtonSize = "large",
                         CommandKey = "plughub.modules.family-material-parameters.batch-add-material",
                         CommandAssembly = "dist/PlugHub.FamilyMaterialParameters.dll",

@@ -13,7 +13,6 @@ namespace PlugHub.HubeiReportParameters
                 Id = "plughub.modules.hubei-report-parameters",
                 Name = "土建工具",
                 Description = "按用户选择的 CSV 模板创建 Revit 共享参数、写入参数值并生成 HIFC 属性集映射文件。",
-                State = ModuleState.Enabled,
                 Order = 395,
                 Tags = new[] { "civil", "hubei", "report", "planning", "parameter", "shared-parameter", "revit-api" },
                 Features = new List<FeatureDescriptor>
@@ -28,7 +27,6 @@ namespace PlugHub.HubeiReportParameters
                         Group = "土建工具",
                         Tags = new[] { "civil", "hubei", "report", "planning", "parameter", "shared-parameter" },
                         Order = 395,
-                        DefaultState = FeatureState.Visible,
                         ButtonSize = "large",
                         CommandKey = "plughub.modules.hubei-report-parameters.sync",
                         CommandAssembly = "dist/PlugHub.HubeiReportParameters.dll",
